@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wayfeed: a travel briefing in a language you don't speak</title>
+<meta name="description" content="Mark your route and dates. Wayfeed tells you what matters at each stop and day: safety, roads, events and background, translated, with a link to every source. Coming soon.">
+<link rel="canonical" href="https://wayfeed.app/">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="theme-color" content="#1f5bff">
+<meta property="og:title" content="Wayfeed">
+<meta property="og:description" content="A travel briefing for a country whose language you don't speak. Coming soon.">
+<meta property="og:url" content="https://wayfeed.app/">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="/">Wayfeed</a><span class="soon">Coming soon</span></header>
+<main>
+<div class="hero">
+<h1>The local news along your route, in your language.</h1>
+<p class="lede">Mark where you are going and when. Wayfeed reads what the country is saying about each stop and each day, translates it, and links the original.</p>
+<svg class="route" viewBox="0 0 640 170" role="img" aria-label="A route through three stops with one flagged day">
+<path class="path" pathLength="1" d="M30 130 C110 130 120 60 220 60 S330 120 420 100 S540 30 610 40"/>
+<circle class="stop" cx="30" cy="130" r="9"/><circle class="stop" cx="220" cy="60" r="9"/><circle class="stop" cx="420" cy="100" r="9"/>
+<circle class="flag" cx="610" cy="40" r="9"/>
+<text x="30" y="156" text-anchor="start">Stop 1</text><text x="220" y="38" text-anchor="middle">Stop 2</text><text x="420" y="130" text-anchor="middle">Stop 3</text>
+<text x="610" y="20" text-anchor="end">Strike on your travel day</text>
+</svg>
+</div>
+<ul class="stops">
+<li><b>Safety</b><span>Protests, strikes, curfews, floods near where you will be.</span></li>
+<li><b>Roads and transport</b><span>Closures, rail and bus strikes, landslides, airport trouble.</span></li>
+<li><b>Events</b><span>Festivals, concerts and markets on your dates that fit what you like.</span></li>
+<li><b>Background</b><span>What the city is talking about, so the place makes sense.</span></li>
+</ul>
+<section>
+<h2>Pilot destinations</h2>
+<ul class="pilots"><li>Sri Lanka</li><li>Georgia</li><li>USA</li></ul>
+</section>
+<section>
+<h2>What to expect</h2>
+<p>Every item is translated and shows the source it came from, so you can check it yourself. Wayfeed collects reports; it is not an official warning service. Your trip is private and deleted after you travel.</p>
+</section>
+</main>
+<footer>Built on <a href="https://feedql.com">feedql.com</a>. Open source on <a href="https://github.com/tggo/wayfeed">GitHub</a>.</footer>
+</div>
+</body>
+</html>

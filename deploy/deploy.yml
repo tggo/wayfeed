@@ -1,0 +1,69 @@
+---
+# Ships the binary (deploy/build/wayfeed, from `make build`), a systemd unit and a Caddy site.
+# Caddy owns 80/443 and issues the certificate; the app listens on loopback only.
+- hosts: production
+  become: true
+  vars:
+    app_home: /opt/wayfeed
+  tasks:
+    - ansible.builtin.group: { name: wayfeed, system: true }
+    - ansible.builtin.user: { name: wayfeed, group: wayfeed, home: "{{ app_home }}", shell: /usr/sbin/nologin, system: true, create_home: false }
+    - ansible.builtin.file: { path: "{{ app_home }}", state: directory, owner: wayfeed, group: wayfeed, mode: "0755" }
+    - ansible.builtin.copy:
+        src: build/wayfeed
+        dest: "{{ app_home }}/wayfeed.new"
+        owner: wayfeed
+        group: wayfeed
+        mode: "0755"
+    - ansible.builtin.command: mv -f {{ app_home }}/wayfeed.new {{ app_home }}/wayfeed
+    - ansible.builtin.copy:
+        dest: /etc/systemd/system/wayfeed.service
+        content: |
+          [Unit]
+          Description=Wayfeed placeholder site
+          After=network.target
+          [Service]
+          User=wayfeed
+          Group=wayfeed
+          Environment=LISTEN_ADDR=127.0.0.1:{{ app_port }}
+          ExecStart={{ app_home }}/wayfeed
+          Restart=always
+          RestartSec=3
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=full
+          ProtectHome=true
+          [Install]
+          WantedBy=multi-user.target
+    - ansible.builtin.systemd: { name: wayfeed, daemon_reload: true, enabled: true, state: restarted }
+    - ansible.builtin.uri: { url: "http://127.0.0.1:{{ app_port }}/healthz", return_content: true }
+      register: health
+      retries: 10
+      delay: 1
+      until: health.status == 200
+    - name: Caddy site (snippets log/noleak/sec_headers/hsts/compress/proxy_common are the server's)
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/wayfeed.caddy
+        mode: "0644"
+        backup: true
+        content: |
+          {{ domain }} {
+          	import log wayfeed
+          	import noleak
+          	import sec_headers
+          	import hsts
+          	import compress
+          	reverse_proxy 127.0.0.1:{{ app_port }} {
+          		import proxy_common
+          	}
+          }
+          www.{{ domain }} {
+          	redir https://{{ domain }}{uri} 301
+          }
+      register: site
+    - ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile --envfile /etc/caddy/env
+      become_user: caddy
+      changed_when: false
+      when: site is changed
+    - ansible.builtin.systemd: { name: caddy, state: reloaded }
+      when: site is changed

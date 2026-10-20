@@ -1,0 +1,10 @@
+# Copy to inventory.yml (git-ignored) and fill in. Never commit the real one.
+all:
+  hosts:
+    production:
+      ansible_host: <ssh host alias>
+      ansible_user: <ssh user with sudo>
+      ansible_python_interpreter: /usr/bin/python3
+  vars:
+    app_port: <free loopback port>
+    domain: wayfeed.app
