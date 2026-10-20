@@ -1,0 +1,5 @@
+.env*
+!.env.example
+/bin/
+*.log
+.DS_Store
