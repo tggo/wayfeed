@@ -17,7 +17,9 @@ h1{font:400 clamp(2.4rem,7vw,4.6rem)/1.04 ui-serif,Georgia,serif;letter-spacing:
 .route .stop{fill:var(--bg);stroke:var(--ink);stroke-width:2.5}
 .route .flag{fill:var(--flag)}
 .route text{fill:var(--ink);font:500 13px system-ui,sans-serif}
-.route .sub{fill:var(--mute);font-size:11px}
+@media (max-width:640px){.route text{font-size:22px}.route{margin-bottom:1.5rem}}
+footer a{display:inline-block;padding:8px 2px}
+.brand{padding:8px 0}
 @keyframes draw{to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.route .path{animation:none;stroke-dashoffset:0}}
 .stops{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));margin:2rem 0;padding:0;list-style:none}
