@@ -1,0 +1,34 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{if .Title}}{{.Title}} - {{end}}Wayfeed</title>
+<meta name="description" content="A travel briefing for a country whose language you don't speak: what matters at each stop, translated, with a link to every source.">
+<meta name="robots" content="{{if eq .Page "home"}}index,follow{{else}}noindex,nofollow{{end}}">
+<link rel="canonical" href="https://wayfeed.app/{{if ne .Page "home"}}{{.Page}}{{end}}">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="theme-color" content="#1f5bff">
+<link rel="stylesheet" href="/static/style.css?v=3">
+{{if eq .Page "new"}}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">{{end}}
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+<header class="top">
+<a class="brand" href="/"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25 C11 25 11 15 16 15 S21 7 27 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="5" cy="25" r="3" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="27" cy="7" r="3.5" fill="var(--flag)"/></svg>Wayfeed</a>
+{{if .SignedIn}}<nav aria-label="Account"><a href="/trip">Trip</a><form method="post" action="/logout" class="inline"><button class="link" type="submit">Sign out</button></form></nav>{{end}}
+</header>
+<main id="main">
+{{end}}
+{{define "foot"}}</main>
+<footer>
+<p>Wayfeed collects what sources publish and links the original. It is not an official warning service and never says a place is safe.</p>
+<p>Built on <a href="https://feedql.com">feedql.com</a> and open source on <a href="https://github.com/tggo/wayfeed">GitHub</a>. Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</p>
+</footer>
+</div>
+<script src="/static/app.js?v=2" defer></script>
+</body>
+</html>{{end}}

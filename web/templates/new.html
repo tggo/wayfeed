@@ -1,0 +1,26 @@
+{{template "head" .}}
+<h1 class="h2">Plan your trip</h1>
+<p class="lede small">Add each stop with its dates. You see what will be collected before anything is saved.</p>
+<div class="planner">
+<div class="mapcol">
+<form id="search" role="search" class="searchrow">
+<label for="q">Find a place</label>
+<div><input id="q" name="q" type="search" autocomplete="off" placeholder="Kandy, Tbilisi, Reno..."><button class="btn" type="submit">Search</button></div>
+</form>
+<ul id="results" class="results" aria-live="polite"></ul>
+<div id="map" class="map" role="application" aria-label="Map. Click to add a stop."></div>
+<p class="fine">Click the map to add a stop, or search for a place. Stops are visited in the order listed.</p>
+</div>
+<div class="listcol">
+<h2 class="h3">Stops</h2>
+<ol id="stops" class="stoplist"></ol>
+<p id="empty" class="empty">No stops yet.</p>
+<div class="actions"><button id="preview" class="btn" type="button" disabled>Preview what will be collected</button></div>
+<p id="err" class="error" role="alert" hidden></p>
+<div id="previewbox" class="previewbox" hidden aria-live="polite"></div>
+<div class="actions"><button id="create" class="btn primary" type="button" hidden>Create this trip</button></div>
+</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/static/new.js?v=2" defer></script>
+{{template "foot" .}}

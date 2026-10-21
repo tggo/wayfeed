@@ -1,0 +1,32 @@
+{{template "head" .}}
+<div class="hero">
+<h1>The local news along your route, in your language.</h1>
+<p class="lede">Mark where you are going and when. Wayfeed reads what the country is saying about each stop, translates it and links the original.</p>
+<p class="cta"><a class="btn primary" href="/login">Sign in with feedql</a><span class="fine">Free. One trip at a time. Private, and deleted after you travel.</span></p>
+<svg class="route" viewBox="0 0 640 170" role="img" aria-label="A route through Stop 1, Stop 2 and Stop 3, ending at a flag: strike on your travel day">
+<path class="path" pathLength="1" d="M30 130 C110 130 120 60 220 60 S330 120 420 100 S540 30 610 40"/>
+<circle class="stop" cx="30" cy="130" r="9"/><circle class="stop" cx="220" cy="60" r="9"/><circle class="stop" cx="420" cy="100" r="9"/>
+<circle class="flag" cx="610" cy="40" r="9"/>
+<text x="30" y="156" text-anchor="start">Stop 1</text><text x="220" y="38" text-anchor="middle">Stop 2</text><text x="420" y="130" text-anchor="middle">Stop 3</text>
+<text x="610" y="20" text-anchor="end">Strike on your travel day</text>
+</svg>
+</div>
+<ul class="stops">
+<li><b>Safety</b><span>Protests, strikes, curfews, floods near where you will be.</span></li>
+<li><b>Roads and transport</b><span>Closures, rail and bus strikes, landslides, airport trouble.</span></li>
+<li><b>Events</b><span>Festivals, concerts and markets on your dates.</span></li>
+<li><b>Background</b><span>What the city is talking about, so the place makes sense.</span></li>
+</ul>
+<section>
+<h2>How it works</h2>
+<ol class="steps">
+<li><b>Sign in with feedql.</b> Wayfeed has no accounts of its own. feedql asks you to allow it to create and read one trip for you, and nothing else.</li>
+<li><b>Mark your stops on the map</b> with dates. Before anything is saved you see what will be collected, who can see it and when it is deleted.</li>
+<li><b>Read the briefing</b> for each stop, and get alerts if something serious happens where you are.</li>
+</ol>
+</section>
+<section>
+<h2>Pilot destinations</h2>
+<ul class="pilots"><li>Sri Lanka</li><li>Georgia</li><li>USA</li></ul>
+</section>
+{{template "foot" .}}

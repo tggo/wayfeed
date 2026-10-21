@@ -1,0 +1,8 @@
+{{template "head" .}}
+<section class="msg">
+<h1 class="h2">{{.Title}}</h1>
+<p>{{.Text}}</p>
+<p><a class="btn primary" href="{{.Action}}">{{.ActionText}}</a></p>
+</section>
+{{if .ClearCache}}<script src="/static/clear.js"></script>{{end}}
+{{template "foot" .}}

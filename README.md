@@ -9,7 +9,7 @@ Wayfeed is a demo of building a product on [feedql.com](https://feedql.com): it 
 database of news and no user store of its own. It signs you in with feedql (OAuth, PKCE) and reads and writes
 through the public feedql API. Fork it to see how far the API takes you.
 
-Status: planning. Live at [wayfeed.app](https://wayfeed.app) once launched.
+Status: first slice live at [wayfeed.app](https://wayfeed.app): sign in with feedql, plan a trip on a map with a preview, the briefing per stop and the alerts. Run it: `WAYFEED_COOKIE_KEY=$(openssl rand -hex 32) WAYFEED_BASE_URL=http://localhost:8787 LISTEN_ADDR=127.0.0.1:8787 go run .` (register an OAuth client with feedql first; the redirect address is `<base>/auth/callback`).
 
 ## Principles
 
