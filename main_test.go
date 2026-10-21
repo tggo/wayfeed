@@ -479,6 +479,12 @@ func TestArchiveDeleteLogoutAndCrossSiteRefusal(t *testing.T) {
 	}
 }
 
+func TestSourceLabelIsTheHostForWebsites(t *testing.T) {
+	if srcLabel(Item{URL: "https://www.dailymirror.lk/x", Source: "site"}) != "dailymirror.lk" || srcLabel(Item{URL: "https://reddit.com/r/x", Source: "reddit"}) != "reddit" || srcLabel(Item{Source: "site"}) != "site" {
+		t.Fatal("labels")
+	}
+}
+
 func TestGroupDaysAndHelpers(t *testing.T) {
 	d := func(s string) time.Time { x, _ := time.Parse(time.RFC3339, s); return x }
 	g := groupDays([]Item{{Published: d("2026-10-21T08:00:00Z")}, {Published: d("2026-10-21T01:00:00Z")}, {Published: d("2026-10-20T23:00:00Z")}})

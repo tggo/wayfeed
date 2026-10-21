@@ -51,7 +51,7 @@ func NewApp(cfg Config, api *API) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt}).ParseFS(assets, "web/templates/*.html")
+	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel}).ParseFS(assets, "web/templates/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +59,14 @@ func NewApp(cfg Config, api *API) (*App, error) {
 		api = &API{Base: cfg.API}
 	}
 	return &App{cfg: cfg, seal: s, api: api, tpl: t, secure: strings.HasPrefix(cfg.Base, "https://")}, nil
+}
+
+// srcLabel names where a story came from: the site's host for a story read from a website, else the source's own name.
+func srcLabel(it Item) string {
+	if u, err := url.Parse(it.URL); err == nil && u.Host != "" && (it.Source == "site" || it.Source == "") {
+		return strings.TrimPrefix(u.Host, "www.")
+	}
+	return it.Source
 }
 
 func initial(s string) string {

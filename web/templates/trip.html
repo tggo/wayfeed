@@ -21,7 +21,7 @@
 <ul class="items">
 {{range .Items}}<li>
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
-<span class="imeta">{{.Source}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+<span class="imeta">{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 </ul>
