@@ -177,14 +177,46 @@ type Item struct {
 		From string `json:"from"`
 		Low  bool   `json:"low"`
 	} `json:"translated"`
+	Bucket   string `json:"bucket"`
+	Severity int    `json:"severity"`
+	Official bool   `json:"official"`
+	When     *When  `json:"when"`
+}
+
+// When is the day or days of the event a story reports (not when it was published).
+type When struct {
+	Start  string `json:"start"`
+	End    string `json:"end"`
+	Status string `json:"status"`
+}
+
+// Group is the stories of a stop, or of one day of it, in the four buckets.
+type Group struct {
+	Safety     []Item `json:"safety"`
+	Roads      []Item `json:"roads"`
+	Events     []Item `json:"events"`
+	Background []Item `json:"background"`
+}
+
+// Empty says nothing is in any bucket.
+func (g Group) Empty() bool {
+	return len(g.Safety)+len(g.Roads)+len(g.Events)+len(g.Background) == 0
+}
+
+// DayGroup is one day of a stop.
+type DayGroup struct {
+	Date string `json:"date"`
+	Group
 }
 
 type StopBrief struct {
-	Index int    `json:"index"`
-	Stop  Stop   `json:"stop"`
-	Query string `json:"query"`
-	Items []Item `json:"items"`
-	Note  string `json:"note"`
+	Index   int        `json:"index"`
+	Stop    Stop       `json:"stop"`
+	Query   string     `json:"query"`
+	Items   []Item     `json:"items"`
+	Current Group      `json:"current"`
+	Days    []DayGroup `json:"days"`
+	Note    string     `json:"note"`
 }
 
 type Briefing struct {
@@ -246,8 +278,10 @@ type DemoListItem struct {
 // DemoStop is a stop of a demo trip with the stories near it.
 type DemoStop struct {
 	Stop
-	Items []Item `json:"items"`
-	Note  string `json:"note"`
+	Items   []Item     `json:"items"`
+	Current Group      `json:"current"`
+	Days    []DayGroup `json:"days"`
+	Note    string     `json:"note"`
 }
 
 // DemoAlert is an alert of a demo trip.

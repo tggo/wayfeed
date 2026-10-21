@@ -128,3 +128,18 @@ footer p{margin:.3rem 0}
 .card .go{margin-top:6px;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .card,.card b,.card .chain{overflow-wrap:anywhere}
 @media (max-width:640px){.hero .route{display:none}}
+
+.sub{font:600 1.15rem ui-serif,Georgia,serif;margin:1.4rem 0 .4rem}
+.bk{font:600 .85rem system-ui,sans-serif;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);margin:1rem 0 .3rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
+.badge.sev{border-color:var(--flag);color:var(--ink);text-transform:none}
+.badge.cancelled,.badge.changed{border-color:#b3261e;color:var(--ink);text-transform:none}
+details.dayblock{border:1px solid var(--line);border-radius:10px;padding:2px 14px;margin:8px 0;max-width:46rem;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+details.dayblock>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;list-style:none;padding:6px 0}
+details.dayblock>summary::-webkit-details-marker{display:none}
+details.dayblock>summary::before{content:"\25B8";color:var(--mute)}
+details.dayblock[open]>summary::before{content:"\25BE"}
+details.dayblock>summary:focus-visible{outline:3px solid var(--route);outline-offset:2px;border-radius:6px}
+details.dayblock .items{margin-bottom:10px}
+.imeta b{color:var(--ink);font-weight:600}
+.todayline{margin:.6rem 0;max-width:46rem}

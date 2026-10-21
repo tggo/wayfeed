@@ -51,7 +51,7 @@ func NewApp(cfg Config, api *API) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel}).ParseFS(assets, "web/templates/*.html")
+	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel, "sev": sevLabel, "when": whenText, "dow": dowFmt}).ParseFS(assets, "web/templates/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +67,55 @@ func srcLabel(it Item) string {
 		return strings.TrimPrefix(u.Host, "www.")
 	}
 	return it.Source
+}
+
+// BriefView is what the briefing block of a stop shows.
+type BriefView struct {
+	Name    string
+	Current Group
+	Days    []DayGroup
+	Today   string
+}
+
+// sevLabel says how serious a safety or roads story is, in words (never a verdict about a place).
+func sevLabel(n int) string {
+	switch {
+	case n >= 3:
+		return "Serious"
+	case n == 2:
+		return "Notable"
+	case n == 1:
+		return "Minor"
+	}
+	return ""
+}
+
+// whenText is the day or days an event is on: "25 Oct", "25 to 27 Oct".
+func whenText(w *When) string {
+	if w == nil {
+		return ""
+	}
+	a, e1 := time.Parse("2006-01-02", w.Start[:min(10, len(w.Start))])
+	z, e2 := time.Parse("2006-01-02", w.End[:min(10, len(w.End))])
+	if e1 != nil {
+		return ""
+	}
+	if e2 != nil || z.Equal(a) {
+		return a.Format("2 Jan")
+	}
+	if a.Month() == z.Month() {
+		return a.Format("2") + " to " + z.Format("2 Jan")
+	}
+	return a.Format("2 Jan") + " to " + z.Format("2 Jan")
+}
+
+// dowFmt is "Tue 21 Oct" for a day.
+func dowFmt(s string) string {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return s
+	}
+	return t.Format("Mon 2 Jan")
 }
 
 func initial(s string) string {
@@ -299,30 +348,12 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 	if len(b.Stops) > 0 {
 		cur = b.Stops[0]
 	}
-	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "Days": groupDays(cur.Items)})
+	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: cur.Days, Today: time.Now().UTC().Format("2006-01-02")}})
 }
 
 func itoa(n int) string {
 	b, _ := json.Marshal(n)
 	return string(b)
-}
-
-// DayGroup is the items of one publishing day.
-type DayGroup struct {
-	Day   string
-	Items []Item
-}
-
-func groupDays(items []Item) []DayGroup {
-	var out []DayGroup
-	for _, it := range items {
-		d := it.Published.UTC().Format("2006-01-02")
-		if len(out) == 0 || out[len(out)-1].Day != d {
-			out = append(out, DayGroup{Day: d})
-		}
-		out[len(out)-1].Items = append(out[len(out)-1].Items, it)
-	}
-	return out
 }
 
 func (a *App) newPage(w http.ResponseWriter, r *http.Request, tok string) {

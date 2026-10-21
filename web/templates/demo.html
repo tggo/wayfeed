@@ -15,19 +15,7 @@
 <h2 id="brief">Near {{$.Cur.Name}}</h2>
 <p class="note">{{.Disclaimer}}</p>
 {{if $.Cur.Note}}<p class="note">{{$.Cur.Note}}</p>{{end}}
-{{range $.Days}}
-<h3 class="day">{{dateFmt .Day}}</h3>
-<ul class="items">
-{{range .Items}}<li>
-<a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
-<span class="imeta">{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
-{{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
-</li>{{end}}
-</ul>
-<p class="fine">The list is newest first; sorting into safety, roads, events and background and a day-by-day view come when feedql can tell them apart.</p>
-{{else}}
-<p class="empty">No stories for this stop yet. Nothing found near {{$.Cur.Name}} right now; check back later.</p>
-{{end}}
+{{template "briefing" $.BV}}
 </section>
 
 <section aria-labelledby="alerts">

@@ -82,13 +82,17 @@ func newFake(t *testing.T) *fakeFeedql {
 	}))
 	mux.HandleFunc("GET /api/v1/trips/ch_1/briefing", api(func(w http.ResponseWriter, r *http.Request) {
 		stop := r.URL.Query().Get("stop")
-		items := `[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true}},
-		{"id":"i2","url":"https://news.example/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-21T07:00:00Z"},
-		{"id":"i3","url":"https://news.example/3","title":"Rail strike ends","source":"island.lk","published":"2026-10-20T07:00:00Z"}]`
-		if stop == "1" {
-			items = "[]"
+		cur := `{"safety":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true}],
+		"roads":[],"events":[{"id":"i2","url":"https://news.example/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-21T07:00:00Z","bucket":"events","when":{"start":"2026-10-25","end":"2026-10-27","status":"scheduled"}},{"id":"i4","url":"https://news.example/4","title":"Night market cancelled","source":"island.lk","published":"2026-10-21T06:00:00Z","bucket":"events","when":{"start":"2026-10-22","end":"2026-10-22","status":"cancelled"}}],
+		"background":[{"id":"i3","url":"https://news.example/3","title":"Rail strike ends","source":"island.lk","published":"2026-10-20T07:00:00Z","bucket":"background"}]}`
+		days := `[{"date":"2026-10-21","safety":[],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]`
+		if stop == "0" {
+			days = `[{"date":"2026-10-21","safety":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","bucket":"safety","severity":3}],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]`
 		}
-		_, _ = w.Write([]byte(`{"trip_id":"ch_1","state":"active","disclaimer":"feedql collects what the sources publish. It is not an official warning.","partial":false,"stops":[{"index":` + stop + `,"stop":{"name":"Kandy"},"query":"near:7.29,80.63 25km","items":` + items + `,"note":""}]}`))
+		if stop == "1" {
+			cur = `{"safety":[],"roads":[],"events":[],"background":[]}`
+		}
+		_, _ = w.Write([]byte(`{"trip_id":"ch_1","state":"active","disclaimer":"feedql collects what the sources publish. It is not an official warning.","partial":false,"stops":[{"index":` + stop + `,"stop":{"name":"Kandy"},"query":"near:7.29,80.63 25km","items":[],"current":` + cur + `,"days":` + days + `,"note":""}]}`))
 	}))
 	mux.HandleFunc("GET /api/v1/trips/ch_1/alerts", api(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"alerts":[{"id":"a","stop_index":0,"bucket":"roads","severity":3,"title":"Landslide on the Kandy road","place":"Kandy","source_url":"https://n.example/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"overflow":[{"line":"2 more alerts on 2026-10-21 were not sent (at most 10 a day)."}],"disclaimer":"x"}`))
@@ -110,10 +114,11 @@ func newFake(t *testing.T) *fakeFeedql {
 			return
 		}
 		_, _ = w.Write([]byte(`{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","demo":true,"disclaimer":"feedql collects what the sources publish. It is not an official warning.",
-		"stops":[{"name":"Colombo","country":"LK","lat":6.9,"lon":79.8,"radius_km":30,"from":"2026-10-21","to":"2026-10-23","items":[
-		  {"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true}},
-		  {"id":"2","url":"https://dailymirror.lk/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-20T07:00:00Z"}]},
-		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[]}],
+		"stops":[{"name":"Colombo","country":"LK","lat":6.9,"lon":79.8,"radius_km":30,"from":"2026-10-21","to":"2026-10-23","items":[],
+		  "current":{"safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true}],
+		   "roads":[],"events":[{"id":"2","url":"https://dailymirror.lk/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-20T07:00:00Z","bucket":"events","when":{"start":"2026-10-23","end":"2026-10-23","status":"cancelled"}}],"background":[]},
+		  "days":[{"date":"2026-10-21","safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","bucket":"safety","severity":3}],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]},
+		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[],"current":{"safety":[],"roads":[],"events":[],"background":[]},"days":[]}],
 		"alerts":[{"stop_index":0,"bucket":"roads","severity":3,"title":"Landslide closes the Kandy road","place":"Kadugannawa","source_url":"https://dmc.gov.lk/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"generated_at":"2026-10-21T09:00:00Z"}`))
 	})
 	mux.HandleFunc("GET /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
@@ -310,8 +315,7 @@ func TestTripPageShowsStopsBriefingAlertsAndTheOverflowLine(t *testing.T) {
 	c := signedIn(t, app, live())
 	rec := do(h, "GET", "/trip", "", c)
 	b := rec.Body.String()
-	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම",
-		"Perahera dates announced", "21 Oct", "20 Oct", "Landslide on the Kandy road", "official source", "2 more alerts on 2026-10-21", "not an official warning", "Archive this trip", "Delete this trip",
+	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Wed 21 Oct", "Landslide on the Kandy road", "official source", "2 more alerts on 2026-10-21", "not an official warning", "Archive this trip", "Delete this trip",
 		"Sources are refreshed about every 20 minutes", `content="noindex,nofollow"`} {
 		if !strings.Contains(b, want) {
 			t.Errorf("missing %q", want)
@@ -322,7 +326,7 @@ func TestTripPageShowsStopsBriefingAlertsAndTheOverflowLine(t *testing.T) {
 	}
 	// the second stop has no items yet: the page says why
 	b = do(h, "GET", "/trip?stop=1", "", c).Body.String()
-	if !strings.Contains(b, "Nothing found near Ella yet") {
+	if !strings.Contains(b, "Nothing reported near Ella yet") {
 		t.Error("empty stop")
 	}
 	// a stop index out of range falls back to the first stop
@@ -485,14 +489,20 @@ func TestSourceLabelIsTheHostForWebsites(t *testing.T) {
 	}
 }
 
-func TestGroupDaysAndHelpers(t *testing.T) {
-	d := func(s string) time.Time { x, _ := time.Parse(time.RFC3339, s); return x }
-	g := groupDays([]Item{{Published: d("2026-10-21T08:00:00Z")}, {Published: d("2026-10-21T01:00:00Z")}, {Published: d("2026-10-20T23:00:00Z")}})
-	if len(g) != 2 || len(g[0].Items) != 2 || g[1].Day != "2026-10-20" {
-		t.Fatalf("%+v", g)
-	}
-	if len(groupDays(nil)) != 0 || initial("kandy") != "K" || initial("") != "?" || dateFmt("2026-11-05") != "5 Nov" || dateFmt("x") != "x" || itoa(7) != "7" {
+func TestHelpers(t *testing.T) {
+	if initial("kandy") != "K" || initial("") != "?" || dateFmt("2026-11-05") != "5 Nov" || dateFmt("x") != "x" || itoa(7) != "7" {
 		t.Fatal("helpers")
+	}
+	if sevLabel(3) != "Serious" || sevLabel(2) != "Notable" || sevLabel(1) != "Minor" || sevLabel(0) != "" {
+		t.Fatal("severity words")
+	}
+	for in, want := range map[*When]string{nil: "", {Start: "2026-10-25", End: "2026-10-25"}: "25 Oct", {Start: "2026-10-25", End: "2026-10-27"}: "25 to 27 Oct", {Start: "2026-10-30", End: "2026-11-02"}: "30 Oct to 2 Nov", {Start: "2026-10-25T08:00:00Z", End: "2026-10-25T20:00:00Z"}: "25 Oct", {Start: "x"}: ""} {
+		if got := whenText(in); got != want {
+			t.Errorf("%+v: %q want %q", in, got, want)
+		}
+	}
+	if dowFmt("2026-10-21") != "Wed 21 Oct" || dowFmt("x") != "x" {
+		t.Fatal("day names")
 	}
 	if (&APIError{Status: 409, Code: "c", Message: "m"}).Error() == "" {
 		t.Fatal("error text")
@@ -578,7 +588,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 		t.Fatal(rec.Code)
 	}
 	// a second stop has nothing yet and says so
-	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "No stories for this stop yet") {
+	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported near Kandy yet") {
 		t.Error("empty stop")
 	}
 	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {
