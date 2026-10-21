@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -92,6 +93,19 @@ func newFake(t *testing.T) *fakeFeedql {
 	}))
 	mux.HandleFunc("POST /api/v1/trips/ch_1/archive", api(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{}`)) }))
 	mux.HandleFunc("DELETE /api/v1/trips/ch_1", api(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	mux.HandleFunc("GET /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"public_key":"BKEY","subscribed":` + map[bool]string{true: "true", false: "false"}[r.URL.Query().Get("endpoint") == "https://push.example/e1"] + `}`))
+	}))
+	mux.HandleFunc("POST /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		f.bodies = append(f.bodies, "push:"+string(b))
+		w.WriteHeader(204)
+	}))
+	mux.HandleFunc("DELETE /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		f.bodies = append(f.bodies, "unpush:"+string(b))
+		w.WriteHeader(204)
+	}))
 	f.srv = httptest.NewServer(mux)
 	t.Cleanup(f.srv.Close)
 	f.trips = []map[string]any{trip()}
@@ -453,5 +467,56 @@ func TestGroupDaysAndHelpers(t *testing.T) {
 	}
 	if (&APIError{Status: 409, Code: "c", Message: "m"}).Error() == "" {
 		t.Fatal("error text")
+	}
+}
+
+func TestPushRoutesGoThroughThePublicAPI(t *testing.T) {
+	f := newFake(t)
+	app, h := newTestApp(t, f)
+	c := signedIn(t, app, live())
+	rec := do(h, "GET", "/push/state?endpoint=https://push.example/e1", "", c)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"public_key":"BKEY"`) || !strings.Contains(rec.Body.String(), `"subscribed":true`) {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(do(h, "GET", "/push/state", "", c).Body.String(), `"subscribed":false`) {
+		t.Fatal("no endpoint")
+	}
+	sub := `{"endpoint":"https://push.example/e1","expirationTime":null,"keys":{"p256dh":"k","auth":"a"}}`
+	if rec := do(h, "POST", "/push/subscribe", sub, c); rec.Code != 200 || !strings.Contains(f.bodies[len(f.bodies)-1], `push:{"endpoint":"https://push.example/e1"`) {
+		t.Fatalf("%d %v", rec.Code, f.bodies)
+	}
+	if rec := do(h, "POST", "/push/unsubscribe", `{"endpoint":"https://push.example/e1"}`, c); rec.Code != 200 || !strings.Contains(f.bodies[len(f.bodies)-1], `unpush:{"endpoint":"https://push.example/e1"}`) {
+		t.Fatalf("%d %v", rec.Code, f.bodies)
+	}
+	if rec := do(h, "POST", "/push/subscribe", `nope`, c); rec.Code != 400 {
+		t.Fatal(rec.Code)
+	}
+	if rec := do(h, "POST", "/push/unsubscribe", `nope`, c); rec.Code != 400 {
+		t.Fatal(rec.Code)
+	}
+	f.apiErr = func(r *http.Request) (int, string) {
+		return 409, `{"error":{"code":"limit_reached","message":"This app already has the most devices it may subscribe for you."}}`
+	}
+	if rec := do(h, "POST", "/push/subscribe", sub, c); rec.Code != 409 || !strings.Contains(rec.Body.String(), "most devices") {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(h, "GET", "/push/state", "", c); rec.Code != 409 {
+		t.Fatal(rec.Code)
+	}
+	if rec := do(h, "POST", "/push/unsubscribe", `{"endpoint":"x"}`, c); rec.Code != 409 {
+		t.Fatal(rec.Code)
+	}
+	if rec := do(h, "POST", "/push/subscribe", sub); rec.Code != 302 {
+		t.Fatal("signed out:", rec.Code)
+	}
+	f.apiErr = nil
+	if b := do(h, "GET", "/trip", "", c).Body.String(); !strings.Contains(b, "Alerts on this device") || !strings.Contains(b, "/static/push.js") || !strings.Contains(b, "sends nothing") {
+		t.Fatal("the trip page has the push box")
+	}
+	if rec := do(h, "GET", "/static/push.js", ""); rec.Code != 200 || !strings.Contains(rec.Body.String(), "applicationServerKey") {
+		t.Fatal("push.js")
+	}
+	if rec := do(h, "GET", "/sw.js", ""); !strings.Contains(rec.Body.String(), "addEventListener('push'") {
+		t.Fatal("sw push handler")
 	}
 }

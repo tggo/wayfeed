@@ -43,6 +43,14 @@
 {{range $.Alerts.Overflow}}<p class="note">{{.Line}}</p>{{end}}
 </section>
 
+<section aria-labelledby="push" id="pushbox" hidden>
+<h2 id="push">Alerts on this device</h2>
+<p id="pushtext" class="empty"></p>
+<div class="actions"><button id="pushon" class="btn" type="button" hidden>Turn on alerts on this device</button><button id="pushoff" class="btn" type="button" hidden>Turn off alerts on this device</button><button id="pushtest" class="btn" type="button" hidden>Show a test notification</button></div>
+<p id="pusherr" class="error" role="alert" hidden></p>
+<p class="fine">Turning on asks this browser for permission and gives its push address to feedql, which then sends you the alerts of this trip here, and nothing else. Turning off deletes that address from feedql. The test notification is shown by this page only and sends nothing.</p>
+</section>
+
 <section aria-labelledby="end">
 <h2 id="end">End this trip</h2>
 <div class="endrow">
@@ -53,4 +61,5 @@
 </div>
 </section>
 {{end}}
+<script src="/static/push.js?v=4" defer></script>
 {{template "foot" .}}

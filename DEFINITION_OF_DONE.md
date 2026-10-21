@@ -17,10 +17,11 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 - Trip pages are `noindex`, `Cache-Control: private, no-store`; the landing page is indexable.
 
 ## PWA
-- Manifest, icon, service worker (static files cache-first; `/trip` network-first with an offline copy of the last page; sign-out clears the copy). Web Push is not built yet.
+- Manifest, icon, service worker (static files cache-first; `/trip` network-first with an offline copy of the last page; sign-out clears the copy).
+- Web Push: the trip page has "Alerts on this device" (turn on, turn off, show a test notification, and a sentence saying what each does). Turning on asks the browser for permission, subscribes with feedql's public VAPID key (`GET /api/v1/trips/push`), and gives the subscription to feedql (`POST /api/v1/trips/push`, scope `trips:write`); turning off calls `DELETE` and unsubscribes. feedql sends the alerts; the service worker shows `{title, body}` and opens `/trip` on a tap. The device receives trip alerts only. A browser without push (iPhone outside the Home Screen app) is told so. The test notification is shown by the page itself and sends nothing.
 
 ## Tests
 - `go test ./...` (86%+ coverage): sealed cookies, the PKCE request and the token exchange against a fake feedql, refresh and sign-out, every page and POST route, error passthrough, cross-site refusal. The planner script is checked by hand in a browser (phone and desktop screenshots).
 
 ## Not yet
-- Web Push subscription, a day-by-day view and buckets (wait for feedql event dates and buckets), a trip list for archived trips.
+- A day-by-day view and buckets (wait for feedql event dates and buckets), a trip list for archived trips.

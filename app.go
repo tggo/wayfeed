@@ -426,6 +426,47 @@ func (a *App) remove(w http.ResponseWriter, r *http.Request, tok string) {
 	http.Redirect(w, r, "/new", http.StatusSeeOther)
 }
 
+// pushState answers the trip page's script: the key to subscribe with and whether this browser is subscribed.
+func (a *App) pushState(w http.ResponseWriter, r *http.Request, tok string) {
+	var out map[string]any
+	if err := a.api.Do(r.Context(), tok, http.MethodGet, "/trips/push?endpoint="+url.QueryEscape(r.URL.Query().Get("endpoint")), nil, &out); err != nil {
+		a.apiJSON(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// pushSubscribe hands this browser's push subscription to feedql: from then on feedql sends the trip's alerts to it.
+func (a *App) pushSubscribe(w http.ResponseWriter, r *http.Request, tok string) {
+	var b json.RawMessage
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The subscription could not be read."})
+		return
+	}
+	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/trips/push", b, nil); err != nil {
+		a.apiJSON(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *App) pushUnsubscribe(w http.ResponseWriter, r *http.Request, tok string) {
+	var b struct {
+		Endpoint string `json:"endpoint"`
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The request could not be read."})
+		return
+	}
+	if err := a.api.Do(r.Context(), tok, http.MethodDelete, "/trips/push", b, nil); err != nil {
+		a.apiJSON(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 // sameOrigin refuses a state-changing request that comes from another site (the cookies are SameSite=Lax as well).
 func (a *App) sameOrigin(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -477,6 +518,9 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /new", a.guard(a.newPage))
 	mux.HandleFunc("POST /new/preview", a.sameOrigin(a.guard(a.preview)))
 	mux.HandleFunc("POST /new/create", a.sameOrigin(a.guard(a.create)))
+	mux.HandleFunc("GET /push/state", a.guard(a.pushState))
+	mux.HandleFunc("POST /push/subscribe", a.sameOrigin(a.guard(a.pushSubscribe)))
+	mux.HandleFunc("POST /push/unsubscribe", a.sameOrigin(a.guard(a.pushUnsubscribe)))
 	mux.HandleFunc("POST /trip/archive", a.sameOrigin(a.guard(a.archive)))
 	mux.HandleFunc("POST /trip/delete", a.sameOrigin(a.guard(a.remove)))
 	return securityHeaders(mux)
