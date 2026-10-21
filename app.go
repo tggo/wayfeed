@@ -95,6 +95,7 @@ func newOnly(cur Group, days []DayGroup) []DayGroup {
 
 // BriefView is what the briefing block of a stop shows.
 type BriefView struct {
+	Widened string // set when the stop's own radius held little and a wider area or the country was read
 	Name    string
 	Current Group
 	Days    []DayGroup
@@ -372,7 +373,7 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 	if len(b.Stops) > 0 {
 		cur = b.Stops[0]
 	}
-	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
+	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Widened: cur.Widened, Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
 }
 
 func itoa(n int) string {

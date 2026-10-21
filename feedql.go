@@ -216,6 +216,8 @@ type StopBrief struct {
 	Items   []Item     `json:"items"`
 	Current Group      `json:"current"`
 	Days    []DayGroup `json:"days"`
+	Scope   string     `json:"scope"`
+	Widened string     `json:"widened"`
 	Note    string     `json:"note"`
 }
 
@@ -281,6 +283,8 @@ type DemoStop struct {
 	Items   []Item     `json:"items"`
 	Current Group      `json:"current"`
 	Days    []DayGroup `json:"days"`
+	Scope   string     `json:"scope"`
+	Widened string     `json:"widened"`
 	Note    string     `json:"note"`
 }
 
