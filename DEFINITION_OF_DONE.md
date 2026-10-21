@@ -30,3 +30,11 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 
 ## Not yet
 - A day-by-day view and buckets (wait for feedql event dates and buckets), a trip list for archived trips.
+
+## Demo pages on the generic API (Story 40.10, 2026-10-21, owner screenshot)
+
+- **Why:** the demo showed titles only, Reddit chatter in Background and a wrong "Dates changed" badge, and it read feedql's trip-only endpoint.
+- **Expected:** `/demo/<slug>` reads the demo's `feed_url` (the channel's `fqp_` feed, listed by `GET /p/trips`) with `lang=en&summary=1&group=topic,day,bucket&order=severity&collapse=event&tz=<zone>`: a one or two sentence summary under every headline; only stories with a bucket; Background capped at 3 a stop here (a view choice); a headline still being translated is counted, not shown. Stops are the channel's topics named like the stop; until the channel has them (Story 40.9) the whole channel is one list grouped by day and bucket. Without a `feed_url` or when the feed fails it falls back to the trip endpoint.
+- **Display guard:** "Dates changed" shows only when `when.from` is set (the status came from a newer report of the same event). The Tamil congress announcement had a status of "changed" from the date extractor alone; the extractor is fixed in the 39.2 queue.
+- **Open:** excluding Reddit chat and requiring a subject place belongs in the stop topics' filters (40.9, lane-40-C), not here.
+- **Tests:** `TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground`, `TestDatesChangedBadgeNeedsANewerReportOfTheEvent`.

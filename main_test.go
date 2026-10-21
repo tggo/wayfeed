@@ -688,3 +688,32 @@ func TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground(t *testing.T) 
 		t.Errorf("a pending headline is counted: %s", w.Body.String())
 	}
 }
+
+func TestDatesChangedBadgeNeedsANewerReportOfTheEvent(t *testing.T) {
+	today := time.Now().UTC().Format("2006-01-02")
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"trips":[{"slug":"georgia","name":"Georgia","stops":["Tbilisi"],"feed_url":"` + srv.URL + `/p/fqp_abc/feed.json"}]}`))
+	})
+	mux.HandleFunc("GET /p/fqp_abc/feed.json", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[
+		{"id":"a","url":"https://n.example/a","title":"Congress opens","date_published":"` + today + `T08:00:00Z","_feedql":{"topic":"Other","bucket":"events","when":{"start":"` + today + `","end":"` + today + `","status":"changed"}}},
+		{"id":"b","url":"https://n.example/b","title":"Concert moved","date_published":"` + today + `T08:00:00Z","_feedql":{"topic":"Other","bucket":"events","when":{"start":"` + today + `","end":"` + today + `","status":"changed","from":"x"}}}],
+		"_feedql_groups":[{"day":"` + today + `","bucket":"events","topic":"Other","items":["a","b"]}]}`))
+	})
+	srv = httptest.NewServer(mux)
+	defer srv.Close()
+	app, err := NewApp(Config{API: srv.URL, Base: "http://wayfeed.test", ClientID: "wayfeed", CookieKey: testKey}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := do(app.Handler(), "GET", "/demo/georgia", "").Body.String()
+	// no topic is named like the stop, so the whole channel is one list (the channel-wide read)
+	if !strings.Contains(body, "Congress opens") || !strings.Contains(body, "Concert moved") {
+		t.Fatalf("channel-wide fallback: %s", body)
+	}
+	if strings.Count(body, "Dates changed") != 1 {
+		t.Errorf("only the story whose change came from a newer report carries the badge: %d", strings.Count(body, "Dates changed"))
+	}
+}

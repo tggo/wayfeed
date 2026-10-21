@@ -190,6 +190,9 @@ type When struct {
 	Start  string `json:"start"`
 	End    string `json:"end"`
 	Status string `json:"status"`
+	// From is set when the status and dates were carried over from a newer report of the same event: only then is "changed" believable
+	// (a single report's own "changed" is a model's reading of one text and was wrong on a Tamil announcement).
+	From string `json:"from"`
 }
 
 // Group is the stories of a stop, or of one day of it, in the four buckets.

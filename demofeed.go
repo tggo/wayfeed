@@ -99,16 +99,39 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 	for i := range days {
 		days[i] = time.Now().In(loc).AddDate(0, 0, i).Format("2006-01-02")
 	}
+	t := a.layOutStops(d, d.Stops, false, doc, items, pending, days, today)
+	for _, st := range t.Stops {
+		if len(st.Items) > 0 || st.Pending > 0 {
+			return t, nil
+		}
+	}
+	// the channel has no topic named like a stop yet: the whole channel is one list, grouped by day and bucket
+	t = a.layOutStops(d, []string{d.Name}, true, doc, items, pending, days, today)
+	for _, st := range t.Stops {
+		if len(st.Items) > 0 || st.Pending > 0 {
+			return t, nil
+		}
+	}
+	return nil, errNoStops
+}
+
+// layOutStops puts the feed's groups into stops. With all, every topic counts for the one stop given (a channel without a topic per stop).
+func (a *App) layOutStops(d DemoListItem, names []string, all bool, doc feedDoc, items map[string]Item, pending map[string]int, days []string, today string) *DemoTrip {
 	t := &DemoTrip{Slug: d.Slug, Name: d.Name, Alerts: []DemoAlert{}, Disclaimer: demoDisclaimer, GeneratedAt: time.Now().UTC()}
-	for _, name := range d.Stops {
+	for _, name := range names {
 		st := DemoStop{Stop: Stop{Name: name}, Items: []Item{}, Days: []DayGroup{}, Pending: pending[name]}
+		if all {
+			for _, n := range pending {
+				st.Pending += n
+			}
+		}
 		byDay := map[string]*Group{}
 		for _, day := range days {
 			byDay[day] = &Group{}
 		}
 		seen := map[string]bool{}
 		for _, g := range doc.Groups {
-			if g.Topic != name {
+			if !all && g.Topic != name {
 				continue
 			}
 			target := byDay[g.Day]
@@ -133,12 +156,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		st.Current = *byDay[today]
 		t.Stops = append(t.Stops, st)
 	}
-	for _, st := range t.Stops {
-		if len(st.Items) > 0 || st.Pending > 0 {
-			return t, nil
-		}
-	}
-	return nil, errNoStops
+	return t
 }
 
 func put(g *Group, x Item) {
