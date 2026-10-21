@@ -14,13 +14,13 @@
 <div class="listcol">
 <h2 class="h3">Stops</h2>
 <ol id="stops" class="stoplist"></ol>
-<p id="empty" class="empty">No stops yet.</p>
+<p id="empty" class="empty">No stops yet. Add one on the map or by searching, then you can preview.</p>
 <div class="actions"><button id="preview" class="btn" type="button" disabled>Preview what will be collected</button></div>
 <p id="err" class="error" role="alert" hidden></p>
 <div id="previewbox" class="previewbox" hidden aria-live="polite"></div>
-<div class="actions"><button id="create" class="btn primary" type="button" hidden>Create this trip</button></div>
+<div class="actions"><button id="create" class="btn primary" type="button" hidden>Create this trip</button><p id="createnote" class="fine" hidden>This saves the trip in your feedql account and starts collecting before your first stop. You can archive or delete it at any time.</p></div>
 </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="/static/new.js?v=2" defer></script>
+<script src="/static/new.js?v=4" defer></script>
 {{template "foot" .}}

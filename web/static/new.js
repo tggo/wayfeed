@@ -5,7 +5,7 @@
   var mapEl = document.getElementById('map');
   if (!mapEl || !window.L) { return; }
   var $ = function (id) { return document.getElementById(id); };
-  var map = L.map(mapEl, { worldCopyJump: true }).setView([22, 40], 2);
+  var map = L.map(mapEl, { worldCopyJump: true, tap: false }).setView([22, 40], 2);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
   var stops = [];
   var layer = L.layerGroup().addTo(map);
@@ -25,6 +25,7 @@
     previewed = false;
     $('previewbox').hidden = true;
     $('create').hidden = true;
+    $('createnote').hidden = true;
     $('preview').disabled = stops.length === 0;
   }
 
@@ -63,18 +64,19 @@
         row.appendChild(w);
       }
       field('Arrive', 'date', s.from, function (v) { s.from = v; });
-      field('Leave', 'date', s.to, function (v) { s.to = v; });
+      field('Leave', 'date', s.to, function (v) { s.to = v; }, { min: s.from });
       field('Radius km', 'number', String(s.radius_km), function (v) { s.radius_km = Math.max(1, Math.min(300, parseInt(v, 10) || 25)); }, { min: '1', max: '300', inputmode: 'numeric' });
       body.appendChild(row);
       var tools = el('div', { 'class': 'tools' });
       function tool(label, fn, disabled) {
-        var b = el('button', { type: 'button', 'class': 'mini', 'aria-label': label + ' stop ' + (i + 1) }, label);
+        var key = 's' + i + '-' + label.toLowerCase().replace('move ', '');
+        var b = el('button', { type: 'button', 'class': 'mini', 'aria-label': label + ' stop ' + (i + 1), 'data-focus': key }, label);
         b.disabled = !!disabled;
-        b.addEventListener('click', fn);
+        b.addEventListener('click', function () { refocus = label === 'Remove' ? null : 's' + (label === 'Move up' ? i - 1 : i + 1) + '-' + label.toLowerCase().replace('move ', ''); fn(); });
         tools.appendChild(b);
       }
-      tool('Up', function () { stops.splice(i - 1, 0, stops.splice(i, 1)[0]); changed(); }, i === 0);
-      tool('Down', function () { stops.splice(i + 1, 0, stops.splice(i, 1)[0]); changed(); }, i === stops.length - 1);
+      tool('Move up', function () { stops.splice(i - 1, 0, stops.splice(i, 1)[0]); changed(); }, i === 0);
+      tool('Move down', function () { stops.splice(i + 1, 0, stops.splice(i, 1)[0]); changed(); }, i === stops.length - 1);
       tool('Remove', function () { stops.splice(i, 1); changed(); });
       body.appendChild(tools);
       li.appendChild(body);
@@ -82,7 +84,16 @@
     });
     $('empty').hidden = stops.length > 0;
   }
-  function changed() { showError(''); invalidate(); render(); draw(); }
+  var refocus = null;
+  function changed() {
+    showError(''); invalidate(); render(); draw();
+    if (refocus != null) {
+      var f = document.querySelector('[data-focus="' + refocus + '"]');
+      if (f && f.disabled) { f = document.querySelector('[data-focus="' + refocus.replace(/-(up|down)$/, '-remove') + '"]'); }
+      if (f) { f.focus(); }
+      refocus = null;
+    }
+  }
 
   function addStop(name, country, admin, lat, lon) {
     if (stops.length >= 8) { showError('A trip has at most 8 stops.'); return; }
@@ -91,6 +102,8 @@
     stops.push({ name: name || 'Stop ' + (stops.length + 1), country: country || '', admin: admin || '', lat: +lat.toFixed(5), lon: +lon.toFixed(5), radius_km: 25, from: from, to: addDays(from, 2) });
     changed();
     fit();
+    var names = document.querySelectorAll('#stops .sbody > input');
+    if (names.length) { names[names.length - 1].focus(); }
   }
 
   function placeName(a, fallback) {
@@ -159,9 +172,13 @@
         box.appendChild(d);
       });
       box.hidden = false;
+      box.setAttribute('tabindex', '-1');
+      box.scrollIntoView({ block: 'nearest' });
+      box.focus();
       $('create').hidden = false;
+      $('createnote').hidden = false;
       previewed = true;
-    }).catch(function () { $('preview').disabled = false; });
+    }).catch(function (e) { $('preview').disabled = false; if (e && e.message !== 'signin') { showError('Wayfeed could not be reached. Try again.'); } });
   });
 
   $('create').addEventListener('click', function () {
@@ -173,7 +190,7 @@
       $('create').disabled = false;
       showError(res.body.error || 'The trip could not be created.');
       if (res.body.code === 'trip_active') { var a = el('a', { href: '/trip' }, ' Open your trip.'); $('err').appendChild(a); }
-    }).catch(function () { $('create').disabled = false; });
+    }).catch(function (e) { $('create').disabled = false; if (e && e.message !== 'signin') { showError('Wayfeed could not be reached. Try again.'); } });
   });
 
   render();

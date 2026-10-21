@@ -13,13 +13,14 @@
 
 <section aria-labelledby="brief">
 <h2 id="brief">Near {{(index .Trip.Stops $.Stop).Name}}</h2>
+<p class="note">{{$.Disclaimer}}</p>
 {{if $.Partial}}<p class="note">Part of the briefing was not ready in time. Reload in a minute.</p>{{end}}
 {{if $.Brief.Note}}<p class="note">{{$.Brief.Note}}</p>{{end}}
 {{range $.Days}}
 <h3 class="day">{{dateFmt .Day}}</h3>
 <ul class="items">
 {{range .Items}}<li>
-<a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{.Title}}</a>
+<a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
 <span class="imeta">{{.Source}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
@@ -27,17 +28,17 @@
 {{else}}
 <p class="empty">Nothing found near {{(index .Trip.Stops $.Stop).Name}} yet. Wayfeed looks for sources for every stop within the hour of making the trip and keeps looking each hour until it finds some. Check back later.</p>
 {{end}}
-<p class="fine">{{$.Disclaimer}} The list is newest first; sorting into safety, roads, events and background and a day-by-day view come when feedql can tell them apart.</p>
+<p class="fine">The list is newest first; sorting into safety, roads, events and background and a day-by-day view come when feedql can tell them apart.</p>
 </section>
 
 <section aria-labelledby="alerts">
 <h2 id="alerts">Alerts</h2>
 {{range $.Alerts.Alerts}}<article class="alert sev{{.Severity}}">
-<p class="atitle"><b>{{.Bucket}}</b>{{if .Place}} near {{.Place}}{{end}}{{if .Official}} <span class="badge official">official source</span>{{end}}</p>
+<p class="atitle"><b class="cap">{{.Bucket}}</b>{{if .Place}} near {{.Place}}{{end}}{{if .Official}} <span class="badge official">official source, not a warning from Wayfeed</span>{{end}}</p>
 <p><a href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{.Title}}</a></p>
 <p class="fine">{{.SentAt.Format "2 Jan, 15:04"}} UTC. What the source published, not an official warning.</p>
 </article>{{else}}
-<p class="empty">No alerts. One is sent if something serious happens at a stop on its dates.</p>
+<p class="empty">No alerts. One is sent if something serious happens at a stop on its dates. Alerts are what sources published, not an official warning.</p>
 {{end}}
 {{range $.Alerts.Overflow}}<p class="note">{{.Line}}</p>{{end}}
 </section>
@@ -46,9 +47,9 @@
 <h2 id="end">End this trip</h2>
 <div class="endrow">
 {{if ne .Trip.State "archived"}}
-<form method="post" action="/trip/archive"><p>Stops collecting now and makes the trip read only. It is deleted on its date; you can then plan another. It cannot be reopened.</p><button class="btn" type="submit">Archive this trip</button></form>
+<form method="post" action="/trip/archive" data-confirm="Archive this trip? Collection stops now and it becomes read only."><p>Stops collecting now and makes the trip read only. It is deleted on its date; you can then plan another. It cannot be reopened.</p><button class="btn" type="submit">Archive this trip</button></form>
 {{end}}
-<form method="post" action="/trip/delete"><p>Deletes the trip and everything collected for it now. This cannot be undone.</p><button class="btn danger" type="submit">Delete this trip</button></form>
+<form method="post" action="/trip/delete" data-confirm="Delete this trip and everything collected for it now? This cannot be undone."><p>Deletes the trip and everything collected for it now. This cannot be undone.</p><button class="btn danger" type="submit">Delete this trip</button></form>
 </div>
 </section>
 {{end}}
