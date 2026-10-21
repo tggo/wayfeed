@@ -118,3 +118,12 @@ footer p{margin:.3rem 0}
 .map .leaflet-control-attribution{font:11px system-ui,sans-serif}
 @media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:brightness(.78) contrast(1.05)}}
 .actions .fine{margin:.5rem 0 0}
+
+.cards{list-style:none;margin:1rem 0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.card{display:flex;flex-direction:column;gap:4px;min-height:44px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--ink);text-decoration:none}
+.card:hover{border-color:var(--route)}
+.card:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+.card b{font:600 1.1rem ui-serif,Georgia,serif}
+.card .chain{color:var(--mute);font-size:.95rem}
+.card .go{margin-top:6px;color:var(--route);font-weight:600}
+@media (prefers-color-scheme:dark){.card .go{color:var(--ink)}}

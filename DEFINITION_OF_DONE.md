@@ -8,6 +8,11 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 - An expired access token is refreshed with the refresh token; a refused refresh or a 401 clears the cookie and sends the person to sign in again.
 - State-changing requests from another origin are refused (403).
 
+## Public example routes (no account)
+- The landing page shows the three pilot routes (Sri Lanka, Georgia, US west) as cards from feedql's public demo endpoint (`GET /p/trips`), with a fallback list when feedql cannot be reached, and "Build your own trip" (Sign in with feedql).
+- `/demo/<slug>` is the same trip page, read only, with no sign-in: stop tabs, the newest stories near the stop grouped by day with the translated title and the original, the alerts, the disclaimer, no archive, delete or push controls. Data comes from `GET /p/trips/<slug>` (the routes are kept by feedql's house account and their dates roll every day), kept five minutes here; an older copy is shown if feedql is down; an unknown slug is a 404 page.
+- The demo pages are indexable (Open Graph, canonical, sitemap); trip pages of people stay `noindex`.
+
 ## Trip
 - Stops are picked on an OpenStreetMap map (Leaflet 1.9.4 from unpkg with subresource integrity) or found by name with Nominatim; each has arrive/leave dates and a radius, up to 8, reorderable.
 - "Preview what will be collected" calls `POST /api/v1/trips` with `dry_run: true` and shows feedql's own words (what is collected, refresh, who sees it, when it is deleted, whether it can be undone). "Create this trip" appears only after a preview of the current stops; any edit hides it again.

@@ -25,8 +25,12 @@
 <li><b>Read the briefing</b> for each stop, and get alerts if something serious is reported where you are. Alerts are what sources published, not an official warning.</li>
 </ol>
 </section>
-<section>
-<h2>Pilot destinations</h2>
-<ul class="pilots"><li>Sri Lanka</li><li>Georgia</li><li>USA</li></ul>
+<section aria-labelledby="examples">
+<h2 id="examples">Try it on an example route</h2>
+<p class="fine">No account needed. These routes are kept up to date every day, so you see what a briefing looks like right now.</p>
+<ul class="cards">
+{{range .Demos}}<li><a class="card" href="/demo/{{.Slug}}"><b>{{.Name}}</b><span class="chain">{{range $i, $s := .Stops}}{{if $i}} &rarr; {{end}}{{$s}}{{end}}</span><span class="go">See the briefing</span></a></li>{{end}}
+</ul>
+<p class="cta"><a class="btn primary" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your stops on a map and get alerts.</span></p>
 </section>
 {{template "foot" .}}

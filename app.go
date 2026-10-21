@@ -38,6 +38,7 @@ const (
 // App is the web site: it signs people in with feedql, keeps their tokens in a sealed cookie, and reads and writes trips
 // through the public API. It has no database and no user store.
 type App struct {
+	demos  demoCache
 	cfg    Config
 	seal   *Sealer
 	api    *API
@@ -255,7 +256,7 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/trip", http.StatusFound)
 		return
 	}
-	a.page(w, r, http.StatusOK, "home", nil)
+	a.page(w, r, http.StatusOK, "home", map[string]any{"Demos": a.demoList(r.Context())})
 }
 
 func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
@@ -511,6 +512,7 @@ func (a *App) Handler() http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheFS(http.FileServerFS(static))))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	mux.HandleFunc("GET /{$}", a.home)
+	mux.HandleFunc("GET /demo/{slug}", a.demoPage)
 	mux.HandleFunc("GET /login", a.login)
 	mux.HandleFunc("GET /auth/callback", a.callback)
 	mux.HandleFunc("POST /logout", a.sameOrigin(a.logout))

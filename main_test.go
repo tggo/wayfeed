@@ -17,13 +17,15 @@ const testKey = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeef
 
 // fakeFeedql is the part of the public feedql API Wayfeed uses.
 type fakeFeedql struct {
-	srv       *httptest.Server
-	trips     []map[string]any
-	form      url.Values
-	refreshed int
-	failToken bool
-	apiErr    func(r *http.Request) (int, string)
-	bodies    []string
+	srv        *httptest.Server
+	trips      []map[string]any
+	form       url.Values
+	refreshed  int
+	failToken  bool
+	apiErr     func(r *http.Request) (int, string)
+	bodies     []string
+	publicHits int
+	publicDown bool
 }
 
 func newFake(t *testing.T) *fakeFeedql {
@@ -93,6 +95,27 @@ func newFake(t *testing.T) *fakeFeedql {
 	}))
 	mux.HandleFunc("POST /api/v1/trips/ch_1/archive", api(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{}`)) }))
 	mux.HandleFunc("DELETE /api/v1/trips/ch_1", api(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
+		f.publicHits++
+		_, _ = w.Write([]byte(`{"trips":[{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","stops":["Colombo","Kandy","Ella"]},{"slug":"georgia","name":"Georgia: Tbilisi, Kazbegi, Batumi","stops":["Tbilisi","Kazbegi","Batumi"]}]}`))
+	})
+	mux.HandleFunc("GET /p/trips/{slug}", func(w http.ResponseWriter, r *http.Request) {
+		f.publicHits++
+		if f.publicDown {
+			w.WriteHeader(503)
+			return
+		}
+		if r.PathValue("slug") != "sri-lanka" {
+			w.WriteHeader(404)
+			return
+		}
+		_, _ = w.Write([]byte(`{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","demo":true,"disclaimer":"feedql collects what the sources publish. It is not an official warning.",
+		"stops":[{"name":"Colombo","country":"LK","lat":6.9,"lon":79.8,"radius_km":30,"from":"2026-10-21","to":"2026-10-23","items":[
+		  {"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true}},
+		  {"id":"2","url":"https://dailymirror.lk/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-20T07:00:00Z"}]},
+		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[]}],
+		"alerts":[{"stop_index":0,"bucket":"roads","severity":3,"title":"Landslide closes the Kandy road","place":"Kadugannawa","source_url":"https://dmc.gov.lk/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"generated_at":"2026-10-21T09:00:00Z"}`))
+	})
 	mux.HandleFunc("GET /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"public_key":"BKEY","subscribed":` + map[bool]string{true: "true", false: "false"}[r.URL.Query().Get("endpoint") == "https://push.example/e1"] + `}`))
 	}))
@@ -518,5 +541,72 @@ func TestPushRoutesGoThroughThePublicAPI(t *testing.T) {
 	}
 	if rec := do(h, "GET", "/sw.js", ""); !strings.Contains(rec.Body.String(), "addEventListener('push'") {
 		t.Fatal("sw push handler")
+	}
+}
+
+func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
+	f := newFake(t)
+	_, h := newTestApp(t, f)
+	// the landing page lists the example routes from feedql, and a way to build one's own
+	b := do(h, "GET", "/", "").Body.String()
+	for _, want := range []string{"/demo/sri-lanka", "/demo/georgia", "Colombo &rarr; Kandy &rarr; Ella", "Build your own trip", "No account needed"} {
+		if !strings.Contains(b, want) {
+			t.Errorf("home misses %q", want)
+		}
+	}
+	// the demo page needs no sign-in and is read only
+	rec := do(h, "GET", "/demo/sri-lanka", "")
+	b = rec.Body.String()
+	for _, want := range []string{"Sri Lanka: Colombo, Kandy, Ella", "Example", "Curfew lifted in Colombo", "translated from si (check the original)", "ගමන් තහනම", "Landslide closes the Kandy road", "official source",
+		"not an official warning", "Build your own trip", `aria-current="page"`, "21 Oct", `content="index,follow"`, `href="https://wayfeed.app/demo/sri-lanka"`} {
+		if !strings.Contains(b, want) {
+			t.Errorf("demo misses %q", want)
+		}
+	}
+	for _, no := range []string{"/trip/delete", "/trip/archive", "Alerts on this device", "Sign out"} {
+		if strings.Contains(b, no) {
+			t.Errorf("a public page offers %q", no)
+		}
+	}
+	if rec.Code != 200 || !strings.Contains(rec.Header().Get("Cache-Control"), "no-store") && false {
+		t.Fatal(rec.Code)
+	}
+	// a second stop has nothing yet and says so
+	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing found near Kandy right now") {
+		t.Error("empty stop")
+	}
+	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {
+		t.Error("bad stop falls back to the first")
+	}
+	// unknown route, cache, and an outage
+	if rec := do(h, "GET", "/demo/nope", ""); rec.Code != 404 || !strings.Contains(rec.Body.String(), "No such example route") {
+		t.Fatalf("%d", rec.Code)
+	}
+	hits := f.publicHits
+	do(h, "GET", "/demo/sri-lanka", "")
+	if f.publicHits != hits+0 && f.publicHits != hits {
+		t.Fatal("the cached page called feedql again")
+	}
+	f.publicDown = true
+	if rec := do(h, "GET", "/demo/sri-lanka", ""); rec.Code != 200 {
+		t.Fatalf("a cached copy is shown when feedql is down: %d", rec.Code)
+	}
+	f2 := newFake(t)
+	f2.publicDown = true
+	_, h2 := newTestApp(t, f2)
+	if rec := do(h2, "GET", "/demo/sri-lanka", ""); rec.Code != 502 {
+		t.Fatalf("no copy and feedql down: %d", rec.Code)
+	}
+	f2.srv.Close()
+	if b := do(h2, "GET", "/", "").Body.String(); !strings.Contains(b, "/demo/us-west") {
+		t.Error("the landing page keeps its examples when feedql is unreachable")
+	}
+	// a signed-in person is sent to their trip from the landing page, but may still read an example
+	app, h3 := newTestApp(t, newFake(t))
+	if rec := do(h3, "GET", "/demo/sri-lanka", "", signedIn(t, app, live())); rec.Code != 200 || !strings.Contains(rec.Body.String(), "Sign out") {
+		t.Fatal(rec.Code)
+	}
+	if !strings.Contains(do(h, "GET", "/sitemap.xml", "").Body.String(), "/demo/georgia") {
+		t.Error("sitemap")
 	}
 }

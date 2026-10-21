@@ -1,2 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://wayfeed.app/</loc></url></urlset>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://wayfeed.app/</loc></url><url><loc>https://wayfeed.app/demo/sri-lanka</loc></url>
+<url><loc>https://wayfeed.app/demo/georgia</loc></url>
+<url><loc>https://wayfeed.app/demo/us-west</loc></url>
+</urlset>

@@ -215,3 +215,59 @@ type Alerts struct {
 	} `json:"overflow"`
 	Disclaimer string `json:"disclaimer"`
 }
+
+// PublicGet reads a public route of the API (no account): the demo trips.
+func (a *API) PublicGet(ctx context.Context, path string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(a.Base, "/")+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "wayfeed/1")
+	res, err := a.client().Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 4<<20))
+	if res.StatusCode >= 300 {
+		return &APIError{Status: res.StatusCode, Message: "feedql answered " + res.Status}
+	}
+	return json.Unmarshal(raw, out)
+}
+
+// DemoListItem is a demo trip in the list.
+type DemoListItem struct {
+	Slug  string   `json:"slug"`
+	Name  string   `json:"name"`
+	Stops []string `json:"stops"`
+}
+
+// DemoStop is a stop of a demo trip with the stories near it.
+type DemoStop struct {
+	Stop
+	Items []Item `json:"items"`
+	Note  string `json:"note"`
+}
+
+// DemoAlert is an alert of a demo trip.
+type DemoAlert struct {
+	StopIndex int       `json:"stop_index"`
+	Bucket    string    `json:"bucket"`
+	Severity  int       `json:"severity"`
+	Title     string    `json:"title"`
+	Place     string    `json:"place"`
+	URL       string    `json:"source_url"`
+	Official  bool      `json:"official"`
+	SentAt    time.Time `json:"sent_at"`
+}
+
+// DemoTrip is a demo trip as the public API gives it.
+type DemoTrip struct {
+	Slug        string      `json:"slug"`
+	Name        string      `json:"name"`
+	Stops       []DemoStop  `json:"stops"`
+	Alerts      []DemoAlert `json:"alerts"`
+	Disclaimer  string      `json:"disclaimer"`
+	GeneratedAt time.Time   `json:"generated_at"`
+}
