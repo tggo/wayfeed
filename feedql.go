@@ -285,6 +285,7 @@ type DemoStop struct {
 	Days    []DayGroup `json:"days"`
 	Scope   string     `json:"scope"`
 	Widened string     `json:"widened"`
+	Pending int        `json:"pending_translation"`
 	Note    string     `json:"note"`
 }
 

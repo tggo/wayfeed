@@ -10,7 +10,7 @@
 {{if .Events}}<h4 class="bk">Events</h4><ul class="items">{{range .Events}}{{template "item" .}}{{end}}</ul>{{end}}
 {{if .Background}}<h4 class="bk">Background</h4><ul class="items">{{range .Background}}{{template "item" .}}{{end}}</ul>{{end}}{{end}}
 
-{{define "briefing"}}{{if .Widened}}<p class="note widened">{{.Widened}}</p>{{end}}<h3 class="sub">Right now</h3>
+{{define "briefing"}}{{if .Pending}}<p class="note">{{.Pending}} more {{if eq .Pending 1}}story is{{else}}stories are{{end}} being translated into English and will appear in a few minutes.</p>{{end}}{{if .Widened}}<p class="note widened">{{.Widened}}</p>{{end}}<h3 class="sub">Right now</h3>
 {{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. Nothing reported does not mean nothing happened. Sources for each stop are found within the hour of making a route and read every few minutes.</p>{{else}}{{template "group" .Current}}{{end}}
 <h3 class="sub" id="days">Day by day</h3>
 {{$today := .Today}}{{range $i, $d := .Days}}{{if eq $d.Date $today}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="badge active">today</span> <span class="fine">is the "Right now" list above.</span></p>{{else if $d.Empty}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="fine">nothing new reported yet</span></p>{{else}}<details class="dayblock" {{if lt $i 4}}open{{end}}>

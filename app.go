@@ -95,6 +95,7 @@ func newOnly(cur Group, days []DayGroup) []DayGroup {
 
 // BriefView is what the briefing block of a stop shows.
 type BriefView struct {
+	Pending int    // stories held back until their headline is translated into English
 	Widened string // set when the stop's own radius held little and a wider area or the country was read
 	Name    string
 	Current Group

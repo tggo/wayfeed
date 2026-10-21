@@ -118,7 +118,7 @@ func newFake(t *testing.T) *fakeFeedql {
 		  "current":{"safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true}],
 		   "roads":[],"events":[{"id":"2","url":"https://dailymirror.lk/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-20T07:00:00Z","bucket":"events","when":{"start":"2026-10-23","end":"2026-10-23","status":"cancelled"}}],"background":[]},
 		  "days":[{"date":"2026-10-21","safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","bucket":"safety","severity":3}],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]},
-		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[],"current":{"safety":[],"roads":[],"events":[],"background":[]},"days":[],"scope":"area","widened":"Nothing reported within 30 km of Kandy; showing news from the wider area (within 150 km)."}],
+		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[],"current":{"safety":[],"roads":[],"events":[],"background":[]},"days":[],"pending_translation":3,"scope":"area","widened":"Nothing reported within 30 km of Kandy; showing news from the wider area (within 150 km)."}],
 		"alerts":[{"stop_index":0,"bucket":"roads","severity":3,"title":"Landslide closes the Kandy road","place":"Kadugannawa","source_url":"https://dmc.gov.lk/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"generated_at":"2026-10-21T09:00:00Z"}`))
 	})
 	mux.HandleFunc("GET /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
@@ -588,7 +588,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 		t.Fatal(rec.Code)
 	}
 	// a second stop has nothing yet and says so
-	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported within 30 km of Kandy; showing news from the wider area") {
+	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported within 30 km of Kandy; showing news from the wider area", "3 more stories are being translated into English") {
 		t.Error("empty stop")
 	}
 	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {
