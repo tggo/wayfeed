@@ -578,7 +578,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 		t.Fatal(rec.Code)
 	}
 	// a second stop has nothing yet and says so
-	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing found near Kandy right now") {
+	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "No stories for this stop yet") {
 		t.Error("empty stop")
 	}
 	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {

@@ -3,7 +3,7 @@
 <h1>The local news along your route, in your language.</h1>
 <p class="lede">Mark where you are going and when. Wayfeed reads what the country is saying about each stop, translates it and links the original.</p>
 <p class="cta"><a class="btn primary" href="/login">Sign in with feedql</a><a class="btn" href="#examples">See an example route</a><span class="fine">Free. One trip at a time. Private, and deleted after you travel.</span></p>
-<svg class="route" viewBox="0 0 640 170" role="img" aria-label="A route through Stop 1, Stop 2 and Stop 3, ending at a flag: strike on your travel day">
+<svg class="route" viewBox="0 0 640 170" role="img" aria-label="An example route through three stops">
 <path class="path" pathLength="1" d="M30 130 C110 130 120 60 220 60 S330 120 420 100 S540 30 610 40"/>
 <circle class="stop" cx="30" cy="130" r="9"/><circle class="stop" cx="220" cy="60" r="9"/><circle class="stop" cx="420" cy="100" r="9"/>
 <circle class="flag" cx="610" cy="40" r="9"/>
@@ -17,7 +17,7 @@
 <ul class="cards">
 {{range .Demos}}<li><a class="card" href="/demo/{{.Slug}}"><b>{{.Name}}</b><span class="chain">{{range $i, $s := .Stops}}{{if $i}} &rarr; {{end}}{{$s}}{{end}}</span><span class="go">See the briefing</span></a></li>{{end}}
 </ul>
-<p class="cta"><a class="btn primary" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your stops on a map and get alerts.</span></p>
+<p class="cta"><a class="btn" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your stops on a map and get alerts.</span></p>
 </section>
 <ul class="stops">
 <li><b>Safety</b><span>Protests, strikes, curfews, floods near where you will be, as reported by sources. Not an official warning.</span></li>

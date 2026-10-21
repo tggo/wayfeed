@@ -3,8 +3,8 @@
 <section class="tripHead">
 <p class="eyebrow"><span class="badge active">Example</span> Updated every day, so it always shows now</p>
 <h1 class="h2">{{.Name}}</h1>
-<p class="meta">This is an example route anyone can read. It belongs to no one, and nothing personal is in it.</p>
-<p class="cta"><a class="btn primary" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your own stops and dates, and get alerts.</span></p>
+<p class="meta">Read-only example. It belongs to no one, and nothing personal is in it.</p>
+<p class="cta"><a class="btn" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your own stops and dates, and get alerts.</span></p>
 </section>
 
 <nav class="tabs" aria-label="Stops">
@@ -24,10 +24,10 @@
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 </ul>
-{{else}}
-<p class="empty">Nothing found near {{$.Cur.Name}} right now. The sources for each stop are still being found; check back later.</p>
-{{end}}
 <p class="fine">The list is newest first; sorting into safety, roads, events and background and a day-by-day view come when feedql can tell them apart.</p>
+{{else}}
+<p class="empty">No stories for this stop yet. Nothing found near {{$.Cur.Name}} right now; check back later.</p>
+{{end}}
 </section>
 
 <section aria-labelledby="alerts">

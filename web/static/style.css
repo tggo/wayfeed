@@ -125,5 +125,6 @@ footer p{margin:.3rem 0}
 .card:focus-visible{outline:3px solid var(--route);outline-offset:2px}
 .card b{font:600 1.1rem ui-serif,Georgia,serif}
 .card .chain{color:var(--mute);font-size:.95rem}
-.card .go{margin-top:6px;color:var(--route);font-weight:600}
-@media (prefers-color-scheme:dark){.card .go{color:var(--ink)}}
+.card .go{margin-top:6px;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.card,.card b,.card .chain{overflow-wrap:anywhere}
+@media (max-width:640px){.hero .route{display:none}}
