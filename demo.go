@@ -105,6 +105,6 @@ func (a *App) demoPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cur := t.Stops[stop]
-	a.page(w, r, http.StatusOK, "demo", map[string]any{"Demo": t, "Stop": stop, "Cur": cur, "BV": BriefView{Name: cur.Name, Current: cur.Current, Days: cur.Days, Today: time.Now().UTC().Format("2006-01-02")}, "Title": t.Name, "Slug": slug,
+	a.page(w, r, http.StatusOK, "demo", map[string]any{"Demo": t, "Stop": stop, "Cur": cur, "BV": BriefView{Name: cur.Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}, "Title": t.Name, "Slug": slug,
 		"OGPath": "/demo/" + slug, "OGTitle": t.Name + " - an example briefing on Wayfeed", "OGDesc": "The local news near each stop of " + t.Name + ", translated, with a link to every source. Updated every day. No account needed."})
 }

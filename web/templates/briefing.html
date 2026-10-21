@@ -1,20 +1,20 @@
 {{define "item"}}<li class="story">
-{{if or .Official (sev .Severity) .When}}<p class="chips">{{if .Official}}<span class="badge official">official source</span>{{end}}{{with sev .Severity}}<span class="badge sev">{{.}}</span>{{end}}{{if .When}}{{if eq .When.Status "cancelled"}}<span class="badge cancelled">Cancelled</span>{{else if eq .When.Status "changed"}}<span class="badge changed">Dates changed</span>{{end}}{{end}}</p>{{end}}
+{{if or .Official .When}}<p class="chips">{{if .Official}}<span class="badge official">official source</span>{{end}}{{if .When}}{{if eq .When.Status "cancelled"}}<span class="badge cancelled">Cancelled</span>{{else if eq .When.Status "changed"}}<span class="badge changed">Dates changed</span>{{end}}{{end}}</p>{{end}}
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
-<span class="imeta">{{with when .When}}<b>{{.}}</b> &middot; {{end}}{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+<span class="imeta">{{with sev .Severity}}<b class="sevtext">Reported as {{lower .}}</b> &middot; {{end}}{{with when .When}}<b>{{.}}</b> &middot; {{end}}{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 
-{{define "group"}}{{if .Safety}}<h4 class="bk">Safety</h4><ul class="items">{{range .Safety}}{{template "item" .}}{{end}}</ul>{{end}}
-{{if .Roads}}<h4 class="bk">Roads and transport</h4><ul class="items">{{range .Roads}}{{template "item" .}}{{end}}</ul>{{end}}
+{{define "group"}}{{if .Safety}}<h4 class="bk">Safety</h4><p class="fine bknote">As reported by sources. Not an official warning, and nothing here says a place is safe.</p><ul class="items">{{range .Safety}}{{template "item" .}}{{end}}</ul>{{end}}
+{{if .Roads}}<h4 class="bk">Roads and transport</h4><p class="fine bknote">As reported by sources. Not an official warning.</p><ul class="items">{{range .Roads}}{{template "item" .}}{{end}}</ul>{{end}}
 {{if .Events}}<h4 class="bk">Events</h4><ul class="items">{{range .Events}}{{template "item" .}}{{end}}</ul>{{end}}
 {{if .Background}}<h4 class="bk">Background</h4><ul class="items">{{range .Background}}{{template "item" .}}{{end}}</ul>{{end}}{{end}}
 
 {{define "briefing"}}<h3 class="sub">Right now</h3>
-{{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. Sources for each stop are found within the hour of making a route and read every few minutes; check back later.</p>{{else}}{{template "group" .Current}}{{end}}
+{{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. Nothing reported does not mean nothing happened. Sources for each stop are found within the hour of making a route and read every few minutes.</p>{{else}}{{template "group" .Current}}{{end}}
 <h3 class="sub" id="days">Day by day</h3>
-{{$today := .Today}}{{range $i, $d := .Days}}{{if eq $d.Date $today}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="badge active">today</span> <span class="fine">is the "Right now" list above.</span></p>{{else}}<details class="dayblock" {{if and (not $d.Empty) (lt $i 3)}}open{{end}}>
-<summary><b>{{dow $d.Date}}</b>{{if $d.Empty}} <span class="fine">nothing reported yet</span>{{end}}</summary>
+{{$today := .Today}}{{range $i, $d := .Days}}{{if eq $d.Date $today}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="badge active">today</span> <span class="fine">is the "Right now" list above.</span></p>{{else if $d.Empty}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="fine">nothing new reported yet</span></p>{{else}}<details class="dayblock" {{if lt $i 4}}open{{end}}>
+<summary><b>{{dow $d.Date}}</b></summary>
 {{template "group" $d.Group}}
 </details>{{end}}{{end}}
 <p class="fine">Safety and roads: the most serious first. Events are on the days they take place; a story with no event date is on the day it was published, and safety and roads stay for three days. Sources are named so you can check them.</p>{{end}}

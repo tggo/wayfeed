@@ -315,7 +315,7 @@ func TestTripPageShowsStopsBriefingAlertsAndTheOverflowLine(t *testing.T) {
 	c := signedIn(t, app, live())
 	rec := do(h, "GET", "/trip", "", c)
 	b := rec.Body.String()
-	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Wed 21 Oct", "Landslide on the Kandy road", "official source", "2 more alerts on 2026-10-21", "not an official warning", "Archive this trip", "Delete this trip",
+	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Reported as serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Wed 21 Oct", "Landslide on the Kandy road", "official source", "2 more alerts on 2026-10-21", "not an official warning", "Archive this trip", "Delete this trip",
 		"Sources are refreshed about every 20 minutes", `content="noindex,nofollow"`} {
 		if !strings.Contains(b, want) {
 			t.Errorf("missing %q", want)
@@ -624,5 +624,14 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 	}
 	if !strings.Contains(do(h, "GET", "/sitemap.xml", "").Body.String(), "/demo/georgia") {
 		t.Error("sitemap")
+	}
+}
+
+func TestNewOnlyDropsWhatRightNowAlreadyShows(t *testing.T) {
+	cur := Group{Safety: []Item{{ID: "a"}}, Roads: []Item{{ID: "r"}}}
+	days := []DayGroup{{Date: "d1", Group: Group{Safety: []Item{{ID: "a"}, {ID: "b"}}, Roads: []Item{{ID: "r"}}, Events: []Item{{ID: "a"}}}}}
+	got := newOnly(cur, days)
+	if len(got[0].Safety) != 1 || got[0].Safety[0].ID != "b" || len(got[0].Roads) != 0 || len(got[0].Events) != 1 {
+		t.Fatalf("%+v", got)
 	}
 }

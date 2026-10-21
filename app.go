@@ -51,7 +51,7 @@ func NewApp(cfg Config, api *API) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel, "sev": sevLabel, "when": whenText, "dow": dowFmt}).ParseFS(assets, "web/templates/*.html")
+	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel, "sev": sevLabel, "lower": strings.ToLower, "when": whenText, "dow": dowFmt}).ParseFS(assets, "web/templates/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +67,30 @@ func srcLabel(it Item) string {
 		return strings.TrimPrefix(u.Host, "www.")
 	}
 	return it.Source
+}
+
+// newOnly takes out of the days the safety and roads stories "Right now" already shows: a story kept for three days is not told again
+// every day.
+func newOnly(cur Group, days []DayGroup) []DayGroup {
+	seen := map[string]bool{}
+	for _, it := range append(append([]Item{}, cur.Safety...), cur.Roads...) {
+		seen[it.ID] = true
+	}
+	drop := func(in []Item) []Item {
+		var out []Item
+		for _, it := range in {
+			if !seen[it.ID] {
+				out = append(out, it)
+			}
+		}
+		return out
+	}
+	out := make([]DayGroup, 0, len(days))
+	for _, d := range days {
+		d.Safety, d.Roads = drop(d.Safety), drop(d.Roads)
+		out = append(out, d)
+	}
+	return out
 }
 
 // BriefView is what the briefing block of a stop shows.
@@ -348,7 +372,7 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 	if len(b.Stops) > 0 {
 		cur = b.Stops[0]
 	}
-	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: cur.Days, Today: time.Now().UTC().Format("2006-01-02")}})
+	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
 }
 
 func itoa(n int) string {

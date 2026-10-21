@@ -132,8 +132,9 @@ footer p{margin:.3rem 0}
 .sub{font:600 1.15rem ui-serif,Georgia,serif;margin:1.4rem 0 .4rem}
 .bk{font:600 .85rem system-ui,sans-serif;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);margin:1rem 0 .3rem}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
-.badge.sev{border-color:var(--flag);color:var(--ink);text-transform:none}
-.badge.cancelled,.badge.changed{border-color:#b3261e;color:var(--ink);text-transform:none}
+.badge.cancelled,.badge.changed{border-color:#b3261e;border-width:2px;color:var(--ink);text-transform:none;font-weight:700}
+@media (prefers-color-scheme:dark){.badge.cancelled,.badge.changed{border-color:#ff8a7a}}
+.badge.official{border-style:dashed}
 details.dayblock{border:1px solid var(--line);border-radius:10px;padding:2px 14px;margin:8px 0;max-width:46rem;background:color-mix(in srgb,var(--panel) 60%,transparent)}
 details.dayblock>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;list-style:none;padding:6px 0}
 details.dayblock>summary::-webkit-details-marker{display:none}
@@ -143,3 +144,9 @@ details.dayblock>summary:focus-visible{outline:3px solid var(--route);outline-of
 details.dayblock .items{margin-bottom:10px}
 .imeta b{color:var(--ink);font-weight:600}
 .todayline{margin:.6rem 0;max-width:46rem}
+
+.sevtext{color:var(--ink)}
+.bknote{margin:0 0 .3rem}
+.story,.ititle,.orig{overflow-wrap:anywhere;min-width:0}
+.orig:lang(si),.orig:lang(ta),.orig:lang(ka),.orig:lang(ar),.orig:lang(hi),.orig:lang(th),.orig:lang(ja),.orig:lang(zh),.orig:lang(ko){font-style:normal}
+.sub{font-size:1.3rem}
