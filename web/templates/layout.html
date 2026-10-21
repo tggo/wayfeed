@@ -3,14 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{if .Title}}{{.Title}} - {{end}}Wayfeed</title>
-<meta name="description" content="A travel briefing for a country whose language you don't speak: what matters at each stop, translated, with a link to every source.">
-<meta name="robots" content="{{if eq .Page "home"}}index,follow{{else}}noindex,nofollow{{end}}">
-<link rel="canonical" href="https://wayfeed.app/{{if ne .Page "home"}}{{.Page}}{{end}}">
+<title>{{if .OGTitle}}{{.OGTitle}}{{else}}{{if .Title}}{{.Title}} - {{end}}Wayfeed{{end}}</title>
+{{$title := "Wayfeed - local news for your route, translated"}}{{if .OGTitle}}{{$title = .OGTitle}}{{end}}
+{{$desc := "A travel briefing for a country whose language you don't speak: what matters at each stop, translated, with a link to every source."}}{{if .OGDesc}}{{$desc = .OGDesc}}{{end}}
+{{$url := "https://wayfeed.app/"}}{{if .OGPath}}{{$url = print "https://wayfeed.app" .OGPath}}{{else if ne .Page "home"}}{{$url = print "https://wayfeed.app/" .Page}}{{end}}
+{{$img := "https://wayfeed.app/static/og.png"}}{{if .OGImage}}{{$img = print "https://wayfeed.app" .OGImage}}{{end}}
+{{$public := or (eq .Page "home") .OGPath}}
+<meta name="description" content="{{$desc}}">
+<meta name="robots" content="{{if $public}}index,follow{{else}}noindex,nofollow{{end}}">
+<link rel="canonical" href="{{$url}}">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/static/icon.svg">
-<meta name="theme-color" content="#1f5bff">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="theme-color" content="#0c1a1f">
+<meta property="og:site_name" content="Wayfeed">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{$title}}">
+<meta property="og:description" content="{{$desc}}">
+<meta property="og:url" content="{{$url}}">
+<meta property="og:image" content="{{$img}}">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Wayfeed: local news for your route, translated. A route with stops on a map.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{$title}}">
+<meta name="twitter:description" content="{{$desc}}">
+<meta name="twitter:image" content="{{$img}}">
+<meta name="twitter:image:alt" content="Wayfeed: local news for your route, translated. A route with stops on a map.">
 <link rel="stylesheet" href="/static/style.css?v=4">
 {{if eq .Page "new"}}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">{{end}}
 </head>

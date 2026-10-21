@@ -140,6 +140,8 @@ func TestStaticRoutesAndSecurityHeaders(t *testing.T) {
 		{"/sitemap.xml", "application/xml", "https://wayfeed.app/"},
 		{"/sw.js", "text/javascript", "wf-pages"},
 		{"/static/icon.svg", "image/svg+xml", "<svg"},
+		{"/static/og.png", "image/png", "PNG"},
+		{"/static/apple-touch-icon.png", "image/png", "PNG"},
 		{"/static/new.js", "javascript", "Leaflet"},
 		{"/healthz", "", "ok"},
 	} {
@@ -157,6 +159,21 @@ func TestStaticRoutesAndSecurityHeaders(t *testing.T) {
 	}
 	if rec := do(h, "GET", "/nope", ""); rec.Code != 404 {
 		t.Errorf("404: %d", rec.Code)
+	}
+}
+
+func TestLinkPreviewMeta(t *testing.T) {
+	_, h := newTestApp(t, newFake(t))
+	b := do(h, "GET", "/", "").Body.String()
+	for _, want := range []string{
+		`property="og:image" content="https://wayfeed.app/static/og.png"`,
+		`property="og:image:width" content="1200"`, `property="og:image:height" content="630"`, `property="og:image:alt"`,
+		`property="og:url" content="https://wayfeed.app/"`, `property="og:type"`, `property="og:site_name"`, `property="og:title"`,
+		`name="twitter:card" content="summary_large_image"`, `name="theme-color"`, `rel="canonical" href="https://wayfeed.app/"`,
+	} {
+		if !strings.Contains(b, want) {
+			t.Errorf("home page lacks %s", want)
+		}
 	}
 }
 
