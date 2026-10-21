@@ -181,6 +181,8 @@ type Item struct {
 	Severity int    `json:"severity"`
 	Official bool   `json:"official"`
 	When     *When  `json:"when"`
+	// Summary is feedql's one or two sentence summary in the reader's language, when it is written.
+	Summary string `json:"summary"`
 }
 
 // When is the day or days of the event a story reports (not when it was published).
@@ -270,11 +272,22 @@ func (a *API) PublicGet(ctx context.Context, path string, out any) error {
 	return json.Unmarshal(raw, out)
 }
 
-// DemoListItem is a demo trip in the list.
+// PublicGetURL reads an absolute public address that must be on the API's own host (a feed address the list gave).
+func (a *API) PublicGetURL(ctx context.Context, raw string, out any) error {
+	u, err := url.Parse(raw)
+	b, err2 := url.Parse(a.Base)
+	if err != nil || err2 != nil || u.Host != b.Host || u.Scheme != "https" && u.Scheme != b.Scheme {
+		return errors.New("feed address is not on the API host")
+	}
+	return a.PublicGet(ctx, u.RequestURI(), out)
+}
+
+// DemoListItem is a demo trip in the list. FeedURL is the public feed of its channel (feedql's generic fqp_ feed), which the demo pages read.
 type DemoListItem struct {
-	Slug  string   `json:"slug"`
-	Name  string   `json:"name"`
-	Stops []string `json:"stops"`
+	Slug    string   `json:"slug"`
+	Name    string   `json:"name"`
+	Stops   []string `json:"stops"`
+	FeedURL string   `json:"feed_url"`
 }
 
 // DemoStop is a stop of a demo trip with the stories near it.

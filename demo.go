@@ -68,6 +68,15 @@ func (a *App) demoTrip(ctx context.Context, slug string) (*DemoTrip, error) {
 	if e, ok := a.demos.get(k); ok && time.Since(e.at) < demoTTL {
 		return e.trip, nil
 	}
+	for _, d := range a.demoList(ctx) { // the generic way: the channel's public feed, grouped by feedql (Story 40.10)
+		if d.Slug == slug && d.FeedURL != "" {
+			if t, err := a.demoFromFeed(ctx, d); err == nil && len(t.Stops) > 0 {
+				a.demos.put(k, demoEntry{trip: t, at: time.Now()})
+				return t, nil
+			}
+			break
+		}
+	}
 	var t DemoTrip
 	if err := a.api.PublicGet(ctx, "/p/trips/"+slug, &t); err != nil {
 		var ae *APIError

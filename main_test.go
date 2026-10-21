@@ -614,7 +614,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 		t.Fatalf("no copy and feedql down: %d", rec.Code)
 	}
 	f2.srv.Close()
-	if b := do(h2, "GET", "/", "").Body.String(); !strings.Contains(b, "/demo/us-west") {
+	if b := do(h2, "GET", "/", "").Body.String(); !strings.Contains(b, "/demo/georgia") {
 		t.Error("the landing page keeps its examples when feedql is unreachable")
 	}
 	// a signed-in person is sent to their trip from the landing page, but may still read an example
@@ -633,5 +633,58 @@ func TestNewOnlyDropsWhatRightNowAlreadyShows(t *testing.T) {
 	got := newOnly(cur, days)
 	if len(got[0].Safety) != 1 || got[0].Safety[0].ID != "b" || len(got[0].Roads) != 0 || len(got[0].Events) != 1 {
 		t.Fatalf("%+v", got)
+	}
+}
+
+// Story 40.10: a demo with a feed_url is read through the generic public feed, grouped by feedql, with summaries.
+func TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground(t *testing.T) {
+	today := time.Now().UTC().Format("2006-01-02")
+	var query string
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"trips":[{"slug":"georgia","name":"Georgia: Tbilisi, Batumi","stops":["Tbilisi","Batumi"],"feed_url":"` + srv.URL + `/p/fqp_abc/feed.json"}]}`))
+	})
+	mux.HandleFunc("GET /p/fqp_abc/feed.json", func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		var items, ids []string
+		for i := 1; i <= 5; i++ {
+			id := "b" + itoa(i)
+			items = append(items, `{"id":"`+id+`","url":"https://n.example/`+id+`","title":"Background story `+id+`","summary":"Summary of `+id+`.","date_published":"`+today+`T08:00:00Z","_feedql":{"source":"site","source_name":"n.example","topic":"Tbilisi","bucket":"background"}}`)
+			ids = append(ids, `"`+id+`"`)
+		}
+		items = append(items,
+			`{"id":"s1","url":"https://n.example/s1","title":"Protest closes Rustaveli","summary":"Roads are shut.","date_published":"`+today+`T08:00:00Z","_feedql":{"source":"site","source_name":"civil.ge","topic":"Tbilisi","bucket":"safety","severity":2}}`,
+			`{"id":"nb","url":"https://n.example/nb","title":"No bucket story","_feedql":{"source":"site","topic":"Tbilisi"}}`,
+			`{"id":"p1","url":"https://n.example/p1","title":"","_feedql":{"source":"site","topic":"Batumi","bucket":"events","title_original":"ბათუმი","translation":{"state":"pending"}}}`)
+		_, _ = w.Write([]byte(`{"items":[` + strings.Join(items, ",") + `],"_feedql_groups":[{"day":"` + today + `","bucket":"safety","topic":"Tbilisi","items":["s1"]},{"day":"` + today + `","bucket":"background","topic":"Tbilisi","items":[` + strings.Join(ids, ",") + `]}]}`))
+	})
+	srv = httptest.NewServer(mux)
+	defer srv.Close()
+	app, err := NewApp(Config{API: srv.URL, Base: "http://wayfeed.test", ClientID: "wayfeed", CookieKey: testKey}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := do(app.Handler(), "GET", "/demo/georgia", "")
+	body := w.Body.String()
+	if w.Code != 200 {
+		t.Fatalf("%d %s", w.Code, body)
+	}
+	for _, want := range []string{"Roads are shut.", "Protest closes Rustaveli", "Background story b1", "Summary of b3."} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(body, "Background story b4") || strings.Contains(body, "No bucket story") {
+		t.Error("background is capped at 3 a stop and a story with no bucket is not shown")
+	}
+	for _, want := range []string{"lang=en", "summary=1", "group=topic", "collapse=event"} {
+		if !strings.Contains(query, want) {
+			t.Errorf("the feed was asked without %q: %s", want, query)
+		}
+	}
+	w = do(app.Handler(), "GET", "/demo/georgia?stop=1", "")
+	if !strings.Contains(w.Body.String(), "1 more story is being translated") {
+		t.Errorf("a pending headline is counted: %s", w.Body.String())
 	}
 }

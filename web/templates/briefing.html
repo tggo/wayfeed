@@ -2,6 +2,7 @@
 {{if or .Official .When}}<p class="chips">{{if .Official}}<span class="badge official">official source</span>{{end}}{{if .When}}{{if eq .When.Status "cancelled"}}<span class="badge cancelled">Cancelled</span>{{else if eq .When.Status "changed"}}<span class="badge changed">Dates changed</span>{{end}}{{end}}</p>{{end}}
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
 <span class="imeta">{{with sev .Severity}}<b class="sevtext">Reported as {{lower .}}</b> &middot; {{end}}{{with when .When}}<b>{{.}}</b> &middot; {{end}}{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+{{with .Summary}}<p class="isummary">{{.}}</p>{{end}}
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 

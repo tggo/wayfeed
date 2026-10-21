@@ -8,7 +8,7 @@
 </section>
 
 <nav class="tabs" aria-label="Stops">
-{{$cur := $.Stop}}{{range $i, $s := .Stops}}<a href="/demo/{{$.Slug}}?stop={{$i}}" {{if eq $i $cur}}aria-current="page"{{end}}><b>{{$s.Name}}</b><span>{{dateFmt $s.From}} to {{dateFmt $s.To}}</span></a>{{end}}
+{{$cur := $.Stop}}{{range $i, $s := .Stops}}<a href="/demo/{{$.Slug}}?stop={{$i}}" {{if eq $i $cur}}aria-current="page"{{end}}><b>{{$s.Name}}</b>{{if $s.From}}<span>{{dateFmt $s.From}} to {{dateFmt $s.To}}</span>{{end}}</a>{{end}}
 </nav>
 
 <section aria-labelledby="brief">
