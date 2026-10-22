@@ -97,10 +97,13 @@ func newOnly(cur Group, days []DayGroup) []DayGroup {
 type BriefView struct {
 	Pending int    // stories held back until their headline is translated into English
 	Widened string // set when the stop's own radius held little and a wider area or the country was read
-	Name    string
-	Current Group
-	Days    []DayGroup
-	Today   string
+	// Elsewhere are stories from outside the stop's radius (its country), shown under their own heading right after "Right now".
+	Elsewhere      []Item
+	ElsewhereLabel string
+	Name           string
+	Current        Group
+	Days           []DayGroup
+	Today          string
 }
 
 // sevLabel says how serious a safety or roads story is, in words (never a verdict about a place).

@@ -16,7 +16,6 @@
 <p class="note">{{.Disclaimer}}</p>
 {{if $.Cur.Note}}<p class="note">{{$.Cur.Note}}</p>{{end}}
 {{template "briefing" $.BV}}
-{{with $.Cur.Elsewhere}}<h3 class="sub">{{$.Cur.ElsewhereLabel}}</h3><ul class="items">{{range .}}{{template "item" .}}{{end}}</ul>{{end}}
 </section>
 
 <section aria-labelledby="alerts">

@@ -6,6 +6,13 @@
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 
+{{define "eitem"}}<li class="story">
+<a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
+<span class="imeta">{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+{{with .Summary}}<p class="isummary">{{.}}</p>{{end}}
+{{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
+</li>{{end}}
+
 {{define "group"}}{{if .Safety}}<h4 class="bk">Safety</h4><p class="fine bknote">As reported by sources. Not an official warning, and nothing here says a place is safe.</p><ul class="items">{{range .Safety}}{{template "item" .}}{{end}}</ul>{{end}}
 {{if .Roads}}<h4 class="bk">Roads and transport</h4><p class="fine bknote">As reported by sources. Not an official warning.</p><ul class="items">{{range .Roads}}{{template "item" .}}{{end}}</ul>{{end}}
 {{if .Events}}<h4 class="bk">Events</h4><ul class="items">{{range .Events}}{{template "item" .}}{{end}}</ul>{{end}}
@@ -13,6 +20,7 @@
 
 {{define "briefing"}}{{if .Pending}}<p class="note">{{.Pending}} more {{if eq .Pending 1}}story is{{else}}stories are{{end}} being translated into English and will appear in a few minutes.</p>{{end}}{{if .Widened}}<p class="note widened">{{.Widened}}</p>{{end}}<h3 class="sub">Right now</h3>
 {{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. Nothing reported does not mean nothing happened. Sources for each stop are found within the hour of making a route and read every few minutes.</p>{{else}}{{template "group" .Current}}{{end}}
+{{with .Elsewhere}}<section class="elsewhere" aria-label="Not near this stop"><h3 class="sub">{{$.ElsewhereLabel}}</h3><p class="fine">Not near {{$.Name}}: news from the wider area, shown so the page is not empty. Check the place before you rely on it.</p><ul class="items">{{range .}}{{template "eitem" .}}{{end}}</ul></section>{{end}}
 <h3 class="sub" id="days">Day by day</h3>
 {{$today := .Today}}{{range $i, $d := .Days}}{{if eq $d.Date $today}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="badge active">today</span> <span class="fine">is the "Right now" list above.</span></p>{{else if $d.Empty}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="fine">nothing new reported yet</span></p>{{else}}<details class="dayblock" {{if lt $i 4}}open{{end}}>
 <summary><b>{{dow $d.Date}}</b></summary>
