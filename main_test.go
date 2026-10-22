@@ -717,3 +717,39 @@ func TestDatesChangedBadgeNeedsANewerReportOfTheEvent(t *testing.T) {
 		t.Errorf("only the story whose change came from a newer report carries the badge: %d", strings.Count(body, "Dates changed"))
 	}
 }
+
+// A stop with nothing near it shows its country's news under a plain heading, read with one more filter and never mixed into the stop's list.
+func TestAStopWithNothingNearShowsItsCountrysNewsUnderItsOwnHeading(t *testing.T) {
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	var queries []string
+	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"trips":[{"slug":"georgia","name":"Georgia","stops":["Tbilisi"],"places":[{"name":"Tbilisi","country":"GE","lat":41.7,"lon":44.8,"radius_km":25}],"feed_url":"` + srv.URL + `/p/fqp_abc/feed.json"}]}`))
+	})
+	mux.HandleFunc("GET /p/fqp_abc/feed.json", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		queries = append(queries, q)
+		if !strings.Contains(q, "country:GE") {
+			_, _ = w.Write([]byte(`{"items":[],"_feedql_groups":[]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[{"id":"g1","url":"https://n.example/g1","title":"Parliament passes the budget","summary":"The budget passed.","_feedql":{"topic":"Channel sources","bucket":"events","source_name":"civil.ge"}}]}`))
+	})
+	srv = httptest.NewServer(mux)
+	defer srv.Close()
+	app, err := NewApp(Config{API: srv.URL, Base: "http://wayfeed.test", ClientID: "wayfeed", CookieKey: testKey}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := do(app.Handler(), "GET", "/demo/georgia", "").Body.String()
+	if !strings.Contains(body, "Nothing reported near Tbilisi yet. News from Georgia") || !strings.Contains(body, "Parliament passes the budget") || !strings.Contains(body, "The budget passed.") {
+		t.Fatalf("%s", body)
+	}
+	found := false
+	for _, q := range queries {
+		found = found || (strings.Contains(q, "country:GE") && strings.Contains(q, "-source:reddit") && strings.Contains(q, "bucket:"))
+	}
+	if !found {
+		t.Fatalf("the elsewhere read carries its own filter: %v", queries)
+	}
+}

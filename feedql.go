@@ -291,6 +291,18 @@ type DemoListItem struct {
 	Name    string   `json:"name"`
 	Stops   []string `json:"stops"`
 	FeedURL string   `json:"feed_url"`
+	// Places are the stops with their country and point, for the "elsewhere" read of a stop.
+	Places []DemoPlace `json:"places"`
+}
+
+// DemoPlace is a stop as the demo list gives it.
+type DemoPlace struct {
+	Name     string  `json:"name"`
+	Country  string  `json:"country"`
+	Admin    string  `json:"admin"`
+	Lat      float64 `json:"lat"`
+	Lon      float64 `json:"lon"`
+	RadiusKm int     `json:"radius_km"`
 }
 
 // DemoStop is a stop of a demo trip with the stories near it.
@@ -303,6 +315,9 @@ type DemoStop struct {
 	Widened string     `json:"widened"`
 	Pending int        `json:"pending_translation"`
 	Note    string     `json:"note"`
+	// Elsewhere are stories from the stop's country (or a wider radius) that are not near the stop, at most 5, under their own heading.
+	Elsewhere      []Item `json:"elsewhere"`
+	ElsewhereLabel string `json:"elsewhere_label"`
 }
 
 // DemoAlert is an alert of a demo trip.

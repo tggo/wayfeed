@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -100,8 +102,9 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		days[i] = time.Now().In(loc).AddDate(0, 0, i).Format("2006-01-02")
 	}
 	t := a.layOutStops(d, d.Stops, false, doc, items, pending, days, today)
+	a.addElsewhere(ctx, d, t) // a stop with nothing near it shows its country's news under its own heading
 	for _, st := range t.Stops {
-		if len(st.Items) > 0 || st.Pending > 0 {
+		if len(st.Items) > 0 || st.Pending > 0 || len(st.Elsewhere) > 0 {
 			return t, nil
 		}
 	}
@@ -182,3 +185,97 @@ func capItems(in []Item, n int) []Item {
 const demoDisclaimer = "Wayfeed shows what local sources reported. It is not an official warning, and nothing here says a place is safe."
 
 var errNoStops = errors.New("the demo channel has no topic named like a stop yet")
+
+// elsewhereMax is how many stories a stop shows from outside its radius.
+const elsewhereMax = 5
+
+var countryName = map[string]string{"LK": "Sri Lanka", "GE": "Georgia", "US": "the US"}
+
+// addElsewhere gives each stop a second list, read from the same channel with a filter of its own: the stop's country (for the US, a
+// wider radius around the stop, since a country is too big), minus what the stop already shows, labelled plainly so it is never taken
+// for news near the stop.
+func (a *App) addElsewhere(ctx context.Context, d DemoListItem, t *DemoTrip) {
+	reads := map[string][]Item{}
+	for i := range t.Stops {
+		st := &t.Stops[i]
+		var pl *DemoPlace
+		for j := range d.Places {
+			if d.Places[j].Name == st.Name {
+				pl = &d.Places[j]
+			}
+		}
+		if pl == nil {
+			continue
+		}
+		q, where := "", ""
+		switch {
+		case pl.Country != "" && pl.Country != "US":
+			q, where = "country:"+pl.Country, countryName[pl.Country]
+			if where == "" {
+				where = pl.Country
+			}
+		case pl.Lat != 0 || pl.Lon != 0:
+			q, where = "near:"+strconv.FormatFloat(pl.Lat, 'f', -1, 64)+","+strconv.FormatFloat(pl.Lon, 'f', -1, 64)+" 150km", "within 150 km"
+		default:
+			continue
+		}
+		items, ok := reads[q]
+		if !ok {
+			items = a.readElsewhere(ctx, d.FeedURL, q)
+			reads[q] = items
+		}
+		shown := map[string]bool{}
+		for _, it := range st.Items {
+			shown[it.ID] = true
+		}
+		for _, it := range items {
+			if !shown[it.ID] && len(st.Elsewhere) < elsewhereMax {
+				st.Elsewhere = append(st.Elsewhere, it)
+			}
+		}
+		if len(st.Elsewhere) == 0 {
+			continue
+		}
+		in := "Elsewhere in " + where
+		if strings.HasPrefix(where, "within") {
+			in = "Elsewhere " + where
+		}
+		if len(st.Items) == 0 {
+			in = "Nothing reported near " + st.Name + " yet. News from " + strings.TrimPrefix(where, "within ")
+			if strings.HasPrefix(where, "within") {
+				in = "Nothing reported near " + st.Name + " yet. News " + where
+			}
+		}
+		st.ElsewhereLabel = in
+	}
+}
+
+// readElsewhere reads the demo's feed with one more filter and returns the briefing stories (a bucket, a headline in English).
+func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
+	var doc feedDoc
+	filter := q + " bucket:safety,roads,events,background -source:reddit"
+	u := strings.SplitN(feedURL, "?", 2)[0] + "?lang=en&summary=1&order=severity&collapse=event&q=" + url.QueryEscape(filter)
+	if err := a.api.PublicGetURL(ctx, u, &doc); err != nil {
+		return nil
+	}
+	var out []Item
+	for _, it := range doc.Items {
+		if it.FQ.Bucket == "" || it.Title == "" || (it.FQ.Translation != nil && it.FQ.Translation.State != "ready") {
+			continue
+		}
+		pub, _ := time.Parse(time.RFC3339, it.DatePublished)
+		x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
+			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: it.Summary}
+		if x.Source == "" {
+			x.Source = it.FQ.Source
+		}
+		if it.FQ.Translated != nil {
+			x.Translated = &struct {
+				From string `json:"from"`
+				Low  bool   `json:"low"`
+			}{it.FQ.Translated.From, it.FQ.Translated.Low}
+		}
+		out = append(out, x)
+	}
+	return out
+}
