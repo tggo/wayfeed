@@ -38,12 +38,14 @@ const (
 // App is the web site: it signs people in with feedql, keeps their tokens in a sealed cookie, and reads and writes trips
 // through the public API. It has no database and no user store.
 type App struct {
-	demos  demoCache
-	cfg    Config
-	seal   *Sealer
-	api    *API
-	tpl    *template.Template
-	secure bool
+	demos demoCache
+	// demoDefs are the example routes (demos.json); a test may replace them
+	demoDefs []DemoListItem
+	cfg      Config
+	seal     *Sealer
+	api      *API
+	tpl      *template.Template
+	secure   bool
 }
 
 func NewApp(cfg Config, api *API) (*App, error) {
@@ -58,7 +60,8 @@ func NewApp(cfg Config, api *API) (*App, error) {
 	if api == nil {
 		api = &API{Base: cfg.API}
 	}
-	return &App{cfg: cfg, seal: s, api: api, tpl: t, secure: strings.HasPrefix(cfg.Base, "https://")}, nil
+	defs := loadDemoDefs(demosJSON)
+	return &App{cfg: cfg, seal: s, api: api, tpl: t, demoDefs: defs, secure: strings.HasPrefix(cfg.Base, "https://")}, nil
 }
 
 // srcLabel names where a story came from: the site's host for a story read from a website, else the source's own name.

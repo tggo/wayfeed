@@ -1,0 +1,113 @@
+[
+ {
+  "slug": "sri-lanka",
+  "name": "Sri Lanka: Colombo, Kandy, Ella",
+  "feed_url": "https://api.feedql.com/p/fqp_21a174b46f209e74cabeb7aa747734deeda7d50232f274f15232ee1db827ee28/feed.json",
+  "places": [
+   {
+    "name": "Colombo",
+    "country": "LK",
+    "lat": 6.9271,
+    "lon": 79.8612,
+    "radius_km": 30
+   },
+   {
+    "name": "Kandy",
+    "country": "LK",
+    "lat": 7.2906,
+    "lon": 80.6337,
+    "radius_km": 30
+   },
+   {
+    "name": "Ella",
+    "country": "LK",
+    "lat": 6.8667,
+    "lon": 81.0466,
+    "radius_km": 20
+   }
+  ],
+  "stops": [
+   "Colombo",
+   "Kandy",
+   "Ella"
+  ]
+ },
+ {
+  "slug": "georgia",
+  "name": "Georgia: Tbilisi, Kazbegi, Batumi",
+  "feed_url": "https://api.feedql.com/p/fqp_63457b864795dbfe5378898d4ad5109c302a95d0c13a1d694498ff9c3de054e9/feed.json",
+  "places": [
+   {
+    "name": "Tbilisi",
+    "country": "GE",
+    "lat": 41.7151,
+    "lon": 44.8271,
+    "radius_km": 30
+   },
+   {
+    "name": "Kazbegi",
+    "country": "GE",
+    "lat": 42.6606,
+    "lon": 44.6431,
+    "radius_km": 30
+   },
+   {
+    "name": "Batumi",
+    "country": "GE",
+    "lat": 41.6168,
+    "lon": 41.6367,
+    "radius_km": 30
+   }
+  ],
+  "stops": [
+   "Tbilisi",
+   "Kazbegi",
+   "Batumi"
+  ]
+ },
+ {
+  "slug": "us-west",
+  "name": "US west: San Francisco, Las Vegas, Flagstaff, Moab",
+  "feed_url": "https://api.feedql.com/p/fqp_1b0736a0523ae65a6858f52d316a821a3db29ee3f8696a4e030583615a2f9712/feed.json",
+  "places": [
+   {
+    "name": "San Francisco",
+    "country": "US",
+    "admin": "CA",
+    "lat": 37.7749,
+    "lon": -122.4194,
+    "radius_km": 50
+   },
+   {
+    "name": "Las Vegas",
+    "country": "US",
+    "admin": "NV",
+    "lat": 36.1699,
+    "lon": -115.1398,
+    "radius_km": 50
+   },
+   {
+    "name": "Flagstaff",
+    "country": "US",
+    "admin": "AZ",
+    "lat": 35.1983,
+    "lon": -111.6513,
+    "radius_km": 100
+   },
+   {
+    "name": "Moab",
+    "country": "US",
+    "admin": "UT",
+    "lat": 38.5733,
+    "lon": -109.5498,
+    "radius_km": 100
+   }
+  ],
+  "stops": [
+   "San Francisco",
+   "Las Vegas",
+   "Flagstaff",
+   "Moab"
+  ]
+ }
+]

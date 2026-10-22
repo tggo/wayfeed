@@ -111,27 +111,22 @@ func newFake(t *testing.T) *fakeFeedql {
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	mux.HandleFunc("DELETE /api/v1/channels/ch_1", api(func(w http.ResponseWriter, r *http.Request) { f.deleted++; w.WriteHeader(204) }))
-	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
-		f.publicHits++
-		_, _ = w.Write([]byte(`{"trips":[{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","stops":["Colombo","Kandy","Ella"]},{"slug":"georgia","name":"Georgia: Tbilisi, Kazbegi, Batumi","stops":["Tbilisi","Kazbegi","Batumi"]}]}`))
-	})
-	mux.HandleFunc("GET /p/trips/{slug}", func(w http.ResponseWriter, r *http.Request) {
+	// the public feed of the Sri Lanka example channel (an fqp_ feed): stories of the Colombo stop's topic, grouped by feedql
+	mux.HandleFunc("GET /p/fqp_demo/feed.json", func(w http.ResponseWriter, r *http.Request) {
 		f.publicHits++
 		if f.publicDown {
 			w.WriteHeader(503)
 			return
 		}
-		if r.PathValue("slug") != "sri-lanka" {
-			w.WriteHeader(404)
+		today := time.Now().UTC().Format("2006-01-02")
+		if strings.Contains(r.URL.Query().Get("q"), "country:") { // the country fallback read
+			_, _ = w.Write([]byte(`{"items":[{"id":"c1","url":"https://news.example/c1","title":"Lightning warning for 25 districts","summary":"A lightning warning was issued.","_feedql":{"topic":"Channel sources","bucket":"safety","severity":2,"source_name":"newswire.lk"}}]}`))
 			return
 		}
-		_, _ = w.Write([]byte(`{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","demo":true,"disclaimer":"feedql collects what the sources publish. It is not an official warning.",
-		"stops":[{"name":"Colombo","country":"LK","lat":6.9,"lon":79.8,"radius_km":30,"from":"2026-10-21","to":"2026-10-23","items":[],
-		  "current":{"safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true}],
-		   "roads":[],"events":[{"id":"2","url":"https://dailymirror.lk/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-20T07:00:00Z","bucket":"events","when":{"start":"2026-10-23","end":"2026-10-23","status":"cancelled"}}],"background":[]},
-		  "days":[{"date":"2026-10-21","safety":[{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","bucket":"safety","severity":3}],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]},
-		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[],"current":{"safety":[],"roads":[],"events":[],"background":[]},"days":[],"pending_translation":3,"scope":"area","widened":"Nothing reported within 30 km of Kandy; showing news from the wider area (within 150 km)."}],
-		"alerts":[{"stop_index":0,"bucket":"roads","severity":3,"title":"Landslide closes the Kandy road","place":"Kadugannawa","source_url":"https://dmc.gov.lk/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"generated_at":"2026-10-21T09:00:00Z"}`))
+		_, _ = w.Write([]byte(`{"items":[
+		{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","summary":"The curfew ended. Shops reopened. Buses run again.","date_published":"2026-10-21T08:00:00Z","_feedql":{"topic":"Colombo","bucket":"safety","severity":3,"official":true,"source_name":"adaderana.lk","lang_original":"si","title_original":"ගමන් තහනම","translated":{"from":"si","low":true}}},
+		{"id":"2","url":"https://dailymirror.lk/2","title":"Landslide closes the Kandy road","date_published":"2026-10-21T09:00:00Z","_feedql":{"topic":"Colombo","bucket":"roads","severity":3,"official":true,"source_name":"dmc.gov.lk"}}],
+		"_feedql_groups":[{"day":"` + today + `","bucket":"safety","topic":"Colombo","items":["1"]},{"day":"` + today + `","bucket":"roads","topic":"Colombo","items":["2"]}]}`))
 	})
 	mux.HandleFunc("GET /api/v1/alerts/push", api(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"public_key":"BKEY","subscribed":` + map[bool]string{true: "true", false: "false"}[r.URL.Query().Get("endpoint") == "https://push.example/e1"] + `}`))
@@ -157,7 +152,17 @@ func newTestApp(t *testing.T, f *fakeFeedql) (*App, http.Handler) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	app.demoDefs = demoDefsFor(f.srv.URL)
 	return app, app.Handler()
+}
+
+// demoDefsFor are the example routes, with the Sri Lanka feed on the fake server.
+func demoDefsFor(base string) []DemoListItem {
+	return []DemoListItem{
+		{Slug: "sri-lanka", Name: "Sri Lanka: Colombo, Kandy, Ella", Stops: []string{"Colombo", "Kandy", "Ella"}, FeedURL: base + "/p/fqp_demo/feed.json",
+			Places: []DemoPlace{{Name: "Colombo", Country: "LK", Lat: 6.93, Lon: 79.86, RadiusKm: 30}, {Name: "Kandy", Country: "LK", Lat: 7.29, Lon: 80.63, RadiusKm: 30}, {Name: "Ella", Country: "LK", Lat: 6.87, Lon: 81.05, RadiusKm: 20}}},
+		{Slug: "georgia", Name: "Georgia: Tbilisi, Kazbegi, Batumi", Stops: []string{"Tbilisi", "Kazbegi", "Batumi"}, FeedURL: base + "/p/fqp_demo/feed.json"},
+	}
 }
 
 func signedIn(t *testing.T, app *App, s Session) *http.Cookie {
@@ -575,32 +580,33 @@ func TestPushRoutesGoThroughThePublicAPI(t *testing.T) {
 func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 	f := newFake(t)
 	_, h := newTestApp(t, f)
-	// the landing page lists the example routes from feedql, and a way to build one's own
+	// the landing page lists the example routes from the app's own configuration, and a way to build one's own
 	b := do(h, "GET", "/", "").Body.String()
 	for _, want := range []string{"/demo/sri-lanka", "/demo/georgia", "Colombo &rarr; Kandy &rarr; Ella", "Build your own trip", "No account needed"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("home misses %q", want)
 		}
 	}
-	// the demo page needs no sign-in and is read only
+	// the demo page needs no sign-in and is read only; it reads the channel's public feed
 	rec := do(h, "GET", "/demo/sri-lanka", "")
 	b = rec.Body.String()
-	for _, want := range []string{"Sri Lanka: Colombo, Kandy, Ella", "Example", "Curfew lifted in Colombo", "translated from si (check the original)", "ගමන් තහනම", "Landslide closes the Kandy road", "official source",
-		"not an official warning", "Build your own trip", `aria-current="page"`, "21 Oct", `content="index,follow"`, `href="https://wayfeed.app/demo/sri-lanka"`} {
+	for _, want := range []string{"Sri Lanka: Colombo, Kandy, Ella", "Example", "Curfew lifted in Colombo", "The curfew ended. Shops reopened.", "translated from si (check the original)", "ගමන් තහනම",
+		"Landslide closes the Kandy road", "official source", "not an official warning", "Build your own trip", `aria-current="page"`, `content="index,follow"`, `href="https://wayfeed.app/demo/sri-lanka"`,
+		"Not near Colombo", "Lightning warning for 25 districts"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("demo misses %q", want)
 		}
+	}
+	if strings.Contains(b, "Buses run again.") {
+		t.Error("a summary is cut to two sentences")
 	}
 	for _, no := range []string{"/trip/delete", "/trip/archive", "Alerts on this device", "Sign out"} {
 		if strings.Contains(b, no) {
 			t.Errorf("a public page offers %q", no)
 		}
 	}
-	if rec.Code != 200 || !strings.Contains(rec.Header().Get("Cache-Control"), "no-store") && false {
-		t.Fatal(rec.Code)
-	}
-	// a second stop has nothing yet and says so
-	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported within 30 km of Kandy; showing news from the wider area") || !strings.Contains(b, "3 more stories are being translated into English") {
+	// a second stop has nothing yet and says so; a bad stop index falls back to the first
+	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported near Kandy yet") {
 		t.Error("empty stop")
 	}
 	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {
@@ -612,7 +618,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 	}
 	hits := f.publicHits
 	do(h, "GET", "/demo/sri-lanka", "")
-	if f.publicHits != hits+0 && f.publicHits != hits {
+	if f.publicHits != hits {
 		t.Fatal("the cached page called feedql again")
 	}
 	f.publicDown = true
@@ -627,7 +633,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 	}
 	f2.srv.Close()
 	if b := do(h2, "GET", "/", "").Body.String(); !strings.Contains(b, "/demo/georgia") {
-		t.Error("the landing page keeps its examples when feedql is unreachable")
+		t.Error("the landing page lists its examples when feedql is unreachable")
 	}
 	// a signed-in person is sent to their trip from the landing page, but may still read an example
 	app, h3 := newTestApp(t, newFake(t))
@@ -677,6 +683,7 @@ func TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	app.demoDefs = fetchDefs(t, srv.URL)
 	w := do(app.Handler(), "GET", "/demo/georgia", "")
 	body := w.Body.String()
 	if w.Code != 200 {
@@ -720,6 +727,7 @@ func TestDatesChangedBadgeNeedsANewerReportOfTheEvent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	app.demoDefs = fetchDefs(t, srv.URL)
 	body := do(app.Handler(), "GET", "/demo/georgia", "").Body.String()
 	// no topic is named like the stop, so the whole channel is one list (the channel-wide read)
 	if !strings.Contains(body, "Congress opens") || !strings.Contains(body, "Concert moved") {
@@ -753,6 +761,7 @@ func TestAStopWithNothingNearShowsItsCountrysNewsUnderItsOwnHeading(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	app.demoDefs = fetchDefs(t, srv.URL)
 	body := do(app.Handler(), "GET", "/demo/georgia", "").Body.String()
 	if !strings.Contains(body, "Nothing reported near Tbilisi yet. News from Georgia") || !strings.Contains(body, "Parliament passes the budget") || !strings.Contains(body, "The budget passed.") {
 		t.Fatalf("%s", body)
@@ -792,4 +801,21 @@ func TestAPageTitleHeadlineIsReplacedByTheSummarysFirstSentence(t *testing.T) {
 	if g := fixPageTitle(Item{Title: "DEPARTMENT OF METEOROLOGY"}); g.Title != "DEPARTMENT OF METEOROLOGY" {
 		t.Fatal("no summary, nothing to show instead")
 	}
+}
+
+// fetchDefs reads the example list a test server serves at /p/trips into the app's own configuration.
+func fetchDefs(t *testing.T, base string) []DemoListItem {
+	t.Helper()
+	res, err := http.Get(base + "/p/trips")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var out struct {
+		Trips []DemoListItem `json:"trips"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	return out.Trips
 }

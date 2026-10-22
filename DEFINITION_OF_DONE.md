@@ -10,7 +10,7 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 
 ## Public example routes (no account)
 - The landing page shows the three pilot routes (Sri Lanka, Georgia, US west) as cards from feedql's public demo endpoint (`GET /p/trips`), with a fallback list when feedql cannot be reached, and "Build your own trip" (Sign in with feedql).
-- `/demo/<slug>` is the same trip page, read only, with no sign-in: stop tabs, the newest stories near the stop grouped by day with the translated title and the original, the alerts, the disclaimer, no archive, delete or push controls. Data comes from `GET /p/trips/<slug>` (the routes are kept by feedql's house account and their dates roll every day), kept five minutes here; an older copy is shown if feedql is down; an unknown slug is a 404 page.
+- `/demo/<slug>` is the same trip page, read only, with no sign-in: stop tabs, the newest stories near the stop grouped by day with the translated title and the original, the alerts, the disclaimer, no archive, delete or push controls. Data comes from the example channel's public feed (`demos.json`; see below), kept five minutes here; an older copy is shown if feedql is down; an unknown slug is a 404 page.
 - The demo pages are indexable (Open Graph, canonical, sitemap); trip pages of people stay `noindex`.
 
 ## Trip
@@ -42,3 +42,7 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 ## Private pages on the generic API (Story 40.10)
 
 No `/trips` route is called any more. A trip is a channel made from feedql's "trip" template: `POST /channels/from-template` (dry run for the preview), `GET /channels` (the newest channel the app made), `GET /channels/:id/topics` (the stops: title and the `near:` / `during:` of the filter), `GET /channels/:id/lifecycle` (state, dates, delete day), `GET /c/:id/items?q=topic:<id>&group=day,bucket&order=severity&collapse=event&tz=&lang=en&summary=1` (a stop's briefing: Right now is today's groups, Day by day the stop's days, Background cut to 5), `GET /alert-rules?channel_id=` and `GET /alert-events?rule_id=` (alerts), `PATCH /channels/:id {paused: true}` (archive), `DELETE /channels/:id`, `/alerts/push` (devices). A token from before the new scopes gets a 403 that names the scope: the person is sent to sign in again. Tests: `tripapi_test.go` and the generic fake in `main_test.go`. Not verified on prod: a real sign-in with the new scopes needs the owner's consent on feedql's page.
+
+## The example routes are configuration (Story 40.11 prep, 2026-10-22)
+
+The three example routes come from `demos.json` in this repository (slug, title, stops with name, country, point and radius, and the `fqp_` public feed address of the channel that holds each), not from feedql's `GET /p/trips`, which goes away with the trip routes. The feed address is public by design. A stop's stories are read from that feed (`q=-topic:"Channel sources"` with `group=topic,day,bucket`), and the country fallback with `q=country:<cc>`. If a feed cannot be read, the last copy is shown for up to the cache's life; an unknown slug is a 404. Tests: `TestPilotRoutesArePublicWithNoAccount` and the demo tests set `App.demoDefs`.

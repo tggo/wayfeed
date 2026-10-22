@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -39,57 +42,50 @@ func (c *demoCache) put(k string, e demoEntry) {
 	c.m[k] = e
 }
 
-// fallbackDemos is shown when feedql cannot be reached and nothing was cached yet.
-var fallbackDemos = []DemoListItem{
-	{Slug: "sri-lanka", Name: "Sri Lanka: Colombo, Kandy, Ella", Stops: []string{"Colombo", "Kandy", "Ella"}},
-	{Slug: "georgia", Name: "Georgia: Tbilisi, Kazbegi, Batumi", Stops: []string{"Tbilisi", "Kazbegi", "Batumi"}},
-	{Slug: "us-west", Name: "US west: San Francisco, Las Vegas, Flagstaff, Moab", Stops: []string{"San Francisco", "Las Vegas", "Flagstaff", "Moab"}},
+// demoDefs are the example routes: their stops and the public feed of the channel that holds each (feedql's fqp_ feed, an address that is
+// public by design). They are configuration, read once from demos.json, not something feedql tells us (Story 40.10).
+//
+//go:embed demos.json
+var demosJSON []byte
+
+func loadDemoDefs(raw []byte) []DemoListItem {
+	var out []DemoListItem
+	if err := json.Unmarshal(raw, &out); err != nil {
+		log.Printf("demos.json: %v", err)
+	}
+	return out
 }
 
-func (a *App) demoList(ctx context.Context) []DemoListItem {
-	if e, ok := a.demos.get("list"); ok && time.Since(e.at) < demoTTL {
-		return e.list
-	}
-	var out struct {
-		Trips []DemoListItem `json:"trips"`
-	}
-	if err := a.api.PublicGet(ctx, "/p/trips", &out); err != nil || len(out.Trips) == 0 {
-		if e, ok := a.demos.get("list"); ok {
-			return e.list
-		}
-		return fallbackDemos
-	}
-	a.demos.put("list", demoEntry{list: out.Trips, at: time.Now()})
-	return out.Trips
-}
+func (a *App) demoList(ctx context.Context) []DemoListItem { return a.demoDefs }
+
+var errNoDemo = &APIError{Status: http.StatusNotFound, Code: "not_found", Message: "no such example"}
 
 func (a *App) demoTrip(ctx context.Context, slug string) (*DemoTrip, error) {
+	var def *DemoListItem
+	for i := range a.demoDefs {
+		if a.demoDefs[i].Slug == slug {
+			def = &a.demoDefs[i]
+		}
+	}
+	if def == nil {
+		return nil, errNoDemo
+	}
 	k := "t:" + slug
 	if e, ok := a.demos.get(k); ok && time.Since(e.at) < demoTTL {
 		return e.trip, nil
 	}
-	for _, d := range a.demoList(ctx) { // the generic way: the channel's public feed, grouped by feedql (Story 40.10)
-		if d.Slug == slug && d.FeedURL != "" {
-			if t, err := a.demoFromFeed(ctx, d); err == nil && len(t.Stops) > 0 {
-				a.demos.put(k, demoEntry{trip: t, at: time.Now()})
-				return t, nil
-			}
-			break
-		}
-	}
-	var t DemoTrip
-	if err := a.api.PublicGet(ctx, "/p/trips/"+slug, &t); err != nil {
-		var ae *APIError
-		if errors.As(err, &ae) && ae.Status == http.StatusNotFound {
-			return nil, err
-		}
-		if e, ok := a.demos.get(k); ok {
+	t, err := a.demoFromFeed(ctx, *def)
+	if err != nil || len(t.Stops) == 0 {
+		if e, ok := a.demos.get(k); ok { // an older copy while feedql cannot be reached
 			return e.trip, nil
+		}
+		if err == nil {
+			err = errNoStops
 		}
 		return nil, err
 	}
-	a.demos.put(k, demoEntry{trip: &t, at: time.Now()})
-	return &t, nil
+	a.demos.put(k, demoEntry{trip: t, at: time.Now()})
+	return t, nil
 }
 
 // demoPage is /demo/<slug>: the same trip page as a person's own, read only, with no sign-in.
