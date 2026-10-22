@@ -26,6 +26,8 @@ type fakeFeedql struct {
 	bodies     []string
 	publicHits int
 	publicDown bool
+	queries    []string
+	deleted    int
 }
 
 func newFake(t *testing.T) *fakeFeedql {
@@ -60,45 +62,55 @@ func newFake(t *testing.T) *fakeFeedql {
 			h(w, r)
 		}
 	}
+	// the generic API: a trip is a channel made from the trip template, one topic per stop
 	trip := func() map[string]any {
-		return map[string]any{"id": "ch_1", "name": "Sri Lanka", "trip": map[string]any{"state": "active", "lead_days": 14, "archive_days": 7, "delete_days": 30, "alert_sev": "high",
-			"collect_from": "2026-10-20", "ends_on": "2026-11-12", "delete_on": "2026-12-19", "note": "Sources are refreshed about every 20 minutes during the trip.",
-			"stops": []map[string]any{{"name": "Kandy", "country": "LK", "lat": 7.29, "lon": 80.63, "radius_km": 25, "from": "2026-11-05", "to": "2026-11-08"}, {"name": "Ella", "country": "LK", "lat": 6.87, "lon": 81.05, "radius_km": 25, "from": "2026-11-09", "to": "2026-11-12"}}}}
+		return map[string]any{"id": "ch_1", "name": "Sri Lanka", "main": false, "paused": false}
 	}
-	mux.HandleFunc("GET /api/v1/trips", api(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{"trips": f.trips})
+	mux.HandleFunc("GET /api/v1/channels", api(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"channels": f.trips})
 	}))
-	mux.HandleFunc("POST /api/v1/trips", api(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/channels/ch_1/topics", api(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"topics":[{"id":"t_raw","title":"Channel sources"},{"id":"t_ella","title":"Ella","filter":"near:6.87,81.05 25km during:2026-11-09..2026-11-12 bucket:safety,roads,events,background"},{"id":"t_kandy","title":"Kandy","filter":"near:7.29,80.63 25km during:2026-11-05..2026-11-08 bucket:safety,roads,events,background"}]}`))
+	}))
+	mux.HandleFunc("GET /api/v1/channels/ch_1/lifecycle", api(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"state":"active","active_from":"2026-10-20T00:00:00Z","active_to":"2026-11-12T00:00:00Z","archive_after_days":7,"delete_after_days":30,"delete_at":"2026-12-19T00:00:00Z","boost_note":"Sources are refreshed about every 20 minutes during the trip."}`))
+	}))
+	mux.HandleFunc("POST /api/v1/channels/from-template", api(func(w http.ResponseWriter, r *http.Request) {
 		var b map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&b)
 		raw, _ := json.Marshal(b)
 		f.bodies = append(f.bodies, string(raw))
 		if b["dry_run"] == true {
-			_, _ = w.Write([]byte(`{"dry_run":true,"name":"Trip to Kandy","what_is_collected":"From 2026-10-22 feedql collects news.","refresh":"Faster refresh.","who_sees_it":"Only you.","when_it_is_deleted":"Deleted on 2026-12-19.","can_it_be_undone":"Delete any time."}`))
+			_, _ = w.Write([]byte(`{"dry_run":true,"plan":{"name":"Trip: Kandy","topics":[{"title":"Kandy"}],"lifecycle":{"active_from":"2026-10-22","active_to":"2026-11-08","archive_after_days":7,"delete_after_days":30},"in_words":["Makes the channel for you alone.","Makes 1 topic, one per stop (Kandy)."]}}`))
 			return
 		}
 		w.WriteHeader(201)
-		_ = json.NewEncoder(w).Encode(trip())
+		_, _ = w.Write([]byte(`{"dry_run":false,"plan":{"name":"Trip: Kandy"},"channel":{"id":"ch_1"}}`))
 	}))
-	mux.HandleFunc("GET /api/v1/trips/ch_1/briefing", api(func(w http.ResponseWriter, r *http.Request) {
-		stop := r.URL.Query().Get("stop")
-		cur := `{"safety":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true}],
-		"roads":[],"events":[{"id":"i2","url":"https://news.example/2","title":"Perahera dates announced","source":"dailymirror.lk","published":"2026-10-21T07:00:00Z","bucket":"events","when":{"start":"2026-10-25","end":"2026-10-27","status":"scheduled"}},{"id":"i4","url":"https://news.example/4","title":"Night market cancelled","source":"island.lk","published":"2026-10-21T06:00:00Z","bucket":"events","when":{"start":"2026-10-22","end":"2026-10-22","status":"cancelled"}}],
-		"background":[{"id":"i3","url":"https://news.example/3","title":"Rail strike ends","source":"island.lk","published":"2026-10-20T07:00:00Z","bucket":"background"}]}`
-		days := `[{"date":"2026-10-21","safety":[],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]`
-		if stop == "0" {
-			days = `[{"date":"2026-10-21","safety":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","source":"adaderana.lk","published":"2026-10-21T08:00:00Z","bucket":"safety","severity":3}],"roads":[],"events":[],"background":[]},{"date":"2026-10-22","safety":[],"roads":[],"events":[],"background":[]}]`
+	mux.HandleFunc("GET /c/ch_1/items", api(func(w http.ResponseWriter, r *http.Request) {
+		today := time.Now().UTC().Format("2006-01-02")
+		f.queries = append(f.queries, r.URL.RawQuery)
+		if strings.Contains(r.URL.Query().Get("q"), "t_ella") {
+			_, _ = w.Write([]byte(`{"items":[],"groups":[]}`))
+			return
 		}
-		if stop == "1" {
-			cur = `{"safety":[],"roads":[],"events":[],"background":[]}`
-		}
-		_, _ = w.Write([]byte(`{"trip_id":"ch_1","state":"active","disclaimer":"feedql collects what the sources publish. It is not an official warning.","partial":false,"stops":[{"index":` + stop + `,"stop":{"name":"Kandy"},"query":"near:7.29,80.63 25km","items":[],"current":` + cur + `,"days":` + days + `,"note":""}]}`))
+		_, _ = w.Write([]byte(`{"groups":[
+		{"day":"` + today + `","bucket":"safety","items":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"site","source_name":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true,"summary":"The curfew ended. Shops reopened."}]},
+		{"day":"` + today + `","bucket":"events","items":[{"id":"i2","url":"https://news.example/2","title":"Perahera dates announced","source":"site","source_name":"dailymirror.lk","published":"2026-10-21T07:00:00Z","bucket":"events","when":{"start":"2026-10-25","end":"2026-10-27","status":"scheduled"}},{"id":"i4","url":"https://news.example/4","title":"Night market cancelled","source":"site","source_name":"island.lk","published":"2026-10-21T06:00:00Z","bucket":"events","when":{"start":"2026-10-22","end":"2026-10-22","status":"cancelled"}}]},
+		{"day":"` + today + `","bucket":"background","items":[{"id":"i3","url":"https://news.example/3","title":"Rail strike ends","source":"site","source_name":"island.lk","published":"2026-10-20T07:00:00Z","bucket":"background"}]}]}`))
 	}))
-	mux.HandleFunc("GET /api/v1/trips/ch_1/alerts", api(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"alerts":[{"id":"a","stop_index":0,"bucket":"roads","severity":3,"title":"Landslide on the Kandy road","place":"Kandy","source_url":"https://n.example/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"overflow":[{"line":"2 more alerts on 2026-10-21 were not sent (at most 10 a day)."}],"disclaimer":"x"}`))
+	mux.HandleFunc("GET /api/v1/alert-rules", api(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"rules":[{"id":"ar_1"}]}`))
 	}))
-	mux.HandleFunc("POST /api/v1/trips/ch_1/archive", api(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{}`)) }))
-	mux.HandleFunc("DELETE /api/v1/trips/ch_1", api(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	mux.HandleFunc("GET /api/v1/alert-events", api(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"alerts":[{"id":"a","bucket":"roads","severity":3,"title":"Landslide on the Kandy road","place":"Kandy","source_url":"https://n.example/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}]}`))
+	}))
+	mux.HandleFunc("PATCH /api/v1/channels/ch_1", api(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		f.bodies = append(f.bodies, "patch:"+string(b))
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	mux.HandleFunc("DELETE /api/v1/channels/ch_1", api(func(w http.ResponseWriter, r *http.Request) { f.deleted++; w.WriteHeader(204) }))
 	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
 		f.publicHits++
 		_, _ = w.Write([]byte(`{"trips":[{"slug":"sri-lanka","name":"Sri Lanka: Colombo, Kandy, Ella","stops":["Colombo","Kandy","Ella"]},{"slug":"georgia","name":"Georgia: Tbilisi, Kazbegi, Batumi","stops":["Tbilisi","Kazbegi","Batumi"]}]}`))
@@ -121,15 +133,15 @@ func newFake(t *testing.T) *fakeFeedql {
 		 {"name":"Kandy","from":"2026-10-24","to":"2026-10-26","items":[],"current":{"safety":[],"roads":[],"events":[],"background":[]},"days":[],"pending_translation":3,"scope":"area","widened":"Nothing reported within 30 km of Kandy; showing news from the wider area (within 150 km)."}],
 		"alerts":[{"stop_index":0,"bucket":"roads","severity":3,"title":"Landslide closes the Kandy road","place":"Kadugannawa","source_url":"https://dmc.gov.lk/a","official":true,"sent_at":"2026-10-21T09:00:00Z"}],"generated_at":"2026-10-21T09:00:00Z"}`))
 	})
-	mux.HandleFunc("GET /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/alerts/push", api(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"public_key":"BKEY","subscribed":` + map[bool]string{true: "true", false: "false"}[r.URL.Query().Get("endpoint") == "https://push.example/e1"] + `}`))
 	}))
-	mux.HandleFunc("POST /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/alerts/push", api(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		f.bodies = append(f.bodies, "push:"+string(b))
 		w.WriteHeader(204)
 	}))
-	mux.HandleFunc("DELETE /api/v1/trips/push", api(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/alerts/push", api(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		f.bodies = append(f.bodies, "unpush:"+string(b))
 		w.WriteHeader(204)
@@ -253,7 +265,7 @@ func TestSignInUsesPKCEAndExchangesTheCode(t *testing.T) {
 	loc, _ := url.Parse(rec.Header().Get("Location"))
 	q := loc.Query()
 	if rec.Code != 302 || !strings.HasSuffix(loc.Path, "/oauth/authorize") || q.Get("client_id") != "wayfeed" || q.Get("code_challenge_method") != "S256" ||
-		q.Get("scope") != "trips:write" || q.Get("redirect_uri") != "http://wayfeed.test/auth/callback" || !strings.HasSuffix(q.Get("resource"), "/api") || q.Get("response_type") != "code" {
+		q.Get("scope") != "channels:read channels:write items:read trips:write" || q.Get("redirect_uri") != "http://wayfeed.test/auth/callback" || !strings.HasSuffix(q.Get("resource"), "/api") || q.Get("response_type") != "code" {
 		t.Fatalf("%d %s", rec.Code, loc)
 	}
 	var ac *http.Cookie
@@ -309,13 +321,13 @@ func TestSignInUsesPKCEAndExchangesTheCode(t *testing.T) {
 	}
 }
 
-func TestTripPageShowsStopsBriefingAlertsAndTheOverflowLine(t *testing.T) {
+func TestTripPageShowsStopsBriefingAndAlertsFromTheGenericAPI(t *testing.T) {
 	f := newFake(t)
 	app, h := newTestApp(t, f)
 	c := signedIn(t, app, live())
 	rec := do(h, "GET", "/trip", "", c)
 	b := rec.Body.String()
-	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Reported as serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Wed 21 Oct", "Landslide on the Kandy road", "official source", "2 more alerts on 2026-10-21", "not an official warning", "Archive this trip", "Delete this trip",
+	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Reported as serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Thu 5 Nov", "Landslide on the Kandy road", "official source", "not an official warning", "Archive this trip", "Delete this trip",
 		"Sources are refreshed about every 20 minutes", `content="noindex,nofollow"`} {
 		if !strings.Contains(b, want) {
 			t.Errorf("missing %q", want)
@@ -409,11 +421,11 @@ func TestPreviewAndCreateGoThroughThePublicAPI(t *testing.T) {
 	c := signedIn(t, app, live())
 	body := `{"stops":[{"name":"Kandy","country":"LK","lat":7.29,"lon":80.63,"radius_km":25,"from":"2026-11-05","to":"2026-11-08"}]}`
 	rec := do(h, "POST", "/new/preview", body, c)
-	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "Only you.") || !strings.Contains(f.bodies[0], `"dry_run":true`) || !strings.Contains(f.bodies[0], `"name":"Kandy"`) {
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "Only you.") || !strings.Contains(f.bodies[0], `"dry_run":true`) || !strings.Contains(f.bodies[0], `"place":"Kandy"`) {
 		t.Fatalf("%d %s %v", rec.Code, rec.Body.String(), f.bodies)
 	}
 	rec = do(h, "POST", "/new/create", body, c)
-	if rec.Code != 201 || !strings.Contains(rec.Body.String(), `"redirect":"/trip"`) || strings.Contains(f.bodies[1], "dry_run") {
+	if rec.Code != 201 || !strings.Contains(rec.Body.String(), `"redirect":"/trip"`) || strings.Contains(f.bodies[1], `"dry_run":true`) {
 		t.Fatalf("%d %s %v", rec.Code, rec.Body.String(), f.bodies)
 	}
 	// feedql's own words come back, and a second trip is told as such

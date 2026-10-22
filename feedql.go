@@ -41,6 +41,15 @@ func (a *API) client() *http.Client {
 
 // Do calls the REST API as the person; body and out are JSON (nil for none).
 func (a *API) Do(ctx context.Context, token, method, path string, body, out any) error {
+	return a.call(ctx, token, method, "/api/v1"+path, body, out)
+}
+
+// DoC calls a channel route (/c/<channel>/...), which lives beside /api/v1, as the person.
+func (a *API) DoC(ctx context.Context, token, method, path string, body, out any) error {
+	return a.call(ctx, token, method, path, body, out)
+}
+
+func (a *API) call(ctx context.Context, token, method, path string, body, out any) error {
 	var rd io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -49,7 +58,7 @@ func (a *API) Do(ctx context.Context, token, method, path string, body, out any)
 		}
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(a.Base, "/")+"/api/v1"+path, rd)
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(a.Base, "/")+path, rd)
 	if err != nil {
 		return err
 	}
@@ -181,6 +190,8 @@ type Item struct {
 	Severity int    `json:"severity"`
 	Official bool   `json:"official"`
 	When     *When  `json:"when"`
+	// SourceName is who the item came from (a publisher's name); Source is the code of the source type.
+	SourceName string `json:"source_name"`
 	// Summary is feedql's one or two sentence summary in the reader's language, when it is written.
 	Summary string `json:"summary"`
 }

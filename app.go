@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"embed"
@@ -29,7 +28,8 @@ type Config struct {
 }
 
 const (
-	scope      = "trips:write"
+	// the scopes the app asks for: the channels it makes, their items, and the alert push devices (all generic routes)
+	scope      = "channels:read channels:write items:read trips:write"
 	sessCookie = "wf_s"
 	authCookie = "wf_a"
 	sessAge    = 30 * 24 * time.Hour
@@ -63,6 +63,9 @@ func NewApp(cfg Config, api *API) (*App, error) {
 
 // srcLabel names where a story came from: the site's host for a story read from a website, else the source's own name.
 func srcLabel(it Item) string {
+	if it.SourceName != "" {
+		return it.SourceName
+	}
 	if u, err := url.Parse(it.URL); err == nil && u.Host != "" && (it.Source == "site" || it.Source == "") {
 		return strings.TrimPrefix(u.Host, "www.")
 	}
@@ -299,7 +302,8 @@ func (a *App) guard(h func(w http.ResponseWriter, r *http.Request, tok string)) 
 // failAPI shows a feedql error to the person in words.
 func (a *App) failAPI(w http.ResponseWriter, r *http.Request, err error) {
 	var ae *APIError
-	if errors.As(err, &ae) && ae.Status == http.StatusUnauthorized {
+	// a token from before the app asked for the generic scopes is refused with "was not given the ... scope": sign in again to grant them
+	if errors.As(err, &ae) && (ae.Status == http.StatusUnauthorized || ae.Status == http.StatusForbidden && strings.Contains(ae.Message, "scope")) {
 		a.setCookie(w, sessCookie, nil, 0)
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
@@ -310,27 +314,6 @@ func (a *App) failAPI(w http.ResponseWriter, r *http.Request, err error) {
 		text = ae.Message
 	}
 	a.page(w, r, http.StatusBadGateway, "message", map[string]any{"Title": "Something went wrong", "Text": text, "Action": "/trip", "ActionText": "Back to your trip"})
-}
-
-// currentTrip is the person's live trip (or the newest one), nil when they have none.
-func (a *App) currentTrip(ctx context.Context, tok string) (*TripView, error) {
-	var out struct {
-		Trips []TripView `json:"trips"`
-	}
-	if err := a.api.Do(ctx, tok, http.MethodGet, "/trips", nil, &out); err != nil {
-		return nil, err
-	}
-	var pick *TripView
-	for i := range out.Trips {
-		t := &out.Trips[i]
-		if t.Trip != nil && t.Trip.State != "archived" {
-			return t, nil
-		}
-		if pick == nil {
-			pick = t
-		}
-	}
-	return pick, nil
 }
 
 func (a *App) home(w http.ResponseWriter, r *http.Request) {
@@ -363,21 +346,17 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 			}
 		}
 	}
-	var b Briefing
-	if err := a.api.Do(r.Context(), tok, http.MethodGet, "/trips/"+t.ID+"/briefing?stop="+itoa(stop), nil, &b); err != nil {
+	cur, err := a.tripBrief(r.Context(), tok, t, stop)
+	if err != nil {
 		a.failAPI(w, r, err)
 		return
 	}
-	var al Alerts
-	if err := a.api.Do(r.Context(), tok, http.MethodGet, "/trips/"+t.ID+"/alerts?limit=20", nil, &al); err != nil {
+	al, err := a.tripAlerts(r.Context(), tok, t.ID)
+	if err != nil {
 		a.failAPI(w, r, err)
 		return
 	}
-	var cur StopBrief
-	if len(b.Stops) > 0 {
-		cur = b.Stops[0]
-	}
-	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": b.Disclaimer, "Partial": b.Partial, "Alerts": al, "BV": BriefView{Widened: cur.Widened, Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
+	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": demoDisclaimer, "Partial": false, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
 }
 
 func itoa(n int) string {
@@ -440,8 +419,8 @@ func (a *App) preview(w http.ResponseWriter, r *http.Request, tok string) {
 	if !ok {
 		return
 	}
-	var p Preview
-	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/trips", map[string]any{"stops": b.Stops, "dry_run": true}, &p); err != nil {
+	p, err := a.previewTrip(r.Context(), tok, b.Stops)
+	if err != nil {
 		a.apiJSON(w, err)
 		return
 	}
@@ -453,12 +432,12 @@ func (a *App) create(w http.ResponseWriter, r *http.Request, tok string) {
 	if !ok {
 		return
 	}
-	var v TripView
-	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/trips", map[string]any{"stops": b.Stops}, &v); err != nil {
+	id, err := a.createTrip(r.Context(), tok, b.Stops)
+	if err != nil {
 		a.apiJSON(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"redirect": "/trip", "id": v.ID})
+	writeJSON(w, http.StatusCreated, map[string]any{"redirect": "/trip", "id": id})
 }
 
 func (a *App) archive(w http.ResponseWriter, r *http.Request, tok string) {
@@ -471,7 +450,7 @@ func (a *App) archive(w http.ResponseWriter, r *http.Request, tok string) {
 		http.Redirect(w, r, "/new", http.StatusSeeOther)
 		return
 	}
-	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/trips/"+t.ID+"/archive", nil, nil); err != nil {
+	if err := a.archiveTrip(r.Context(), tok, t.ID); err != nil {
 		a.failAPI(w, r, err)
 		return
 	}
@@ -488,7 +467,7 @@ func (a *App) remove(w http.ResponseWriter, r *http.Request, tok string) {
 		http.Redirect(w, r, "/new", http.StatusSeeOther)
 		return
 	}
-	if err := a.api.Do(r.Context(), tok, http.MethodDelete, "/trips/"+t.ID, nil, nil); err != nil {
+	if err := a.deleteTrip(r.Context(), tok, t.ID); err != nil {
 		a.failAPI(w, r, err)
 		return
 	}
@@ -498,7 +477,7 @@ func (a *App) remove(w http.ResponseWriter, r *http.Request, tok string) {
 // pushState answers the trip page's script: the key to subscribe with and whether this browser is subscribed.
 func (a *App) pushState(w http.ResponseWriter, r *http.Request, tok string) {
 	var out map[string]any
-	if err := a.api.Do(r.Context(), tok, http.MethodGet, "/trips/push?endpoint="+url.QueryEscape(r.URL.Query().Get("endpoint")), nil, &out); err != nil {
+	if err := a.api.Do(r.Context(), tok, http.MethodGet, "/alerts/push?endpoint="+url.QueryEscape(r.URL.Query().Get("endpoint")), nil, &out); err != nil {
 		a.apiJSON(w, err)
 		return
 	}
@@ -513,7 +492,7 @@ func (a *App) pushSubscribe(w http.ResponseWriter, r *http.Request, tok string) 
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The subscription could not be read."})
 		return
 	}
-	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/trips/push", b, nil); err != nil {
+	if err := a.api.Do(r.Context(), tok, http.MethodPost, "/alerts/push", b, nil); err != nil {
 		a.apiJSON(w, err)
 		return
 	}
@@ -529,7 +508,7 @@ func (a *App) pushUnsubscribe(w http.ResponseWriter, r *http.Request, tok string
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The request could not be read."})
 		return
 	}
-	if err := a.api.Do(r.Context(), tok, http.MethodDelete, "/trips/push", b, nil); err != nil {
+	if err := a.api.Do(r.Context(), tok, http.MethodDelete, "/alerts/push", b, nil); err != nil {
 		a.apiJSON(w, err)
 		return
 	}
