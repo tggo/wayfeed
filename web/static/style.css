@@ -303,3 +303,5 @@ body.p-demo,body.p-trip{--bg:#EEF2EE;--ink:#22303C;--mute:#4A5A68;--line:#C5CFCB
   .sechead{margin-top:20px}
   .legend{max-width:calc(100% - 20px);bottom:auto;top:8px;left:auto;right:8px;flex-direction:column}
 }
+
+.confirm{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.confirm .btn{margin-right:8px}
