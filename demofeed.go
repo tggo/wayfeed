@@ -85,7 +85,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		}
 		pub, _ := time.Parse(time.RFC3339, it.DatePublished)
 		x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
-			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: it.Summary}
+			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: shortSummary(it.Summary)}
 		if x.Source == "" {
 			x.Source = it.FQ.Source
 		}
@@ -266,7 +266,7 @@ func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
 		}
 		pub, _ := time.Parse(time.RFC3339, it.DatePublished)
 		x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
-			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: it.Summary}
+			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: shortSummary(it.Summary)}
 		if x.Source == "" {
 			x.Source = it.FQ.Source
 		}
@@ -279,4 +279,23 @@ func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
 		out = append(out, x)
 	}
 	return out
+}
+
+// shortSummary is the first two sentences of a summary: a line or two under the headline, never a paragraph.
+func shortSummary(s string) string {
+	s = strings.TrimSpace(s)
+	n, end := 0, 0
+	for i, r := range s {
+		if (r == '.' || r == '!' || r == '?') && (i+1 == len(s) || s[i+1] == ' ') {
+			n++
+			end = i + 1
+			if n == 2 {
+				break
+			}
+		}
+	}
+	if n == 0 || end == 0 {
+		return s
+	}
+	return strings.TrimSpace(s[:end])
 }

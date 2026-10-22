@@ -753,3 +753,17 @@ func TestAStopWithNothingNearShowsItsCountrysNewsUnderItsOwnHeading(t *testing.T
 		t.Fatalf("the elsewhere read carries its own filter: %v", queries)
 	}
 }
+
+func TestSummaryUnderAHeadlineIsAtMostTwoSentences(t *testing.T) {
+	for in, want := range map[string]string{
+		"One. Two. Three. Four.": "One. Two.",
+		"Only one sentence.":     "Only one sentence.",
+		"No end mark":            "No end mark",
+		"Prices rose 8.1% in May. Food rose 6.9%. End.": "Prices rose 8.1% in May. Food rose 6.9%.",
+		"": "",
+	} {
+		if got := shortSummary(in); got != want {
+			t.Errorf("%q: got %q want %q", in, got, want)
+		}
+	}
+}
