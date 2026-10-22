@@ -95,7 +95,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 				Low  bool   `json:"low"`
 			}{it.FQ.Translated.From, it.FQ.Translated.Low}
 		}
-		items[it.ID] = x
+		items[it.ID] = fixPageTitle(x)
 	}
 	today := time.Now().In(loc).Format("2006-01-02")
 	days := make([]string, demoDays)
@@ -276,7 +276,7 @@ func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
 				Low  bool   `json:"low"`
 			}{it.FQ.Translated.From, it.FQ.Translated.Low}
 		}
-		out = append(out, x)
+		out = append(out, fixPageTitle(x))
 	}
 	return out
 }
@@ -298,4 +298,19 @@ func shortSummary(s string) string {
 		return s
 	}
 	return strings.TrimSpace(s[:end])
+}
+
+// fixPageTitle: a page watcher can leave the page's own title ("DEPARTMENT OF METEOROLOGY") as an item's headline. A short all-capitals
+// headline with a summary is shown as that summary's first sentence instead (the recipe is fixed at its source; this keeps the page readable).
+func fixPageTitle(x Item) Item {
+	t := strings.TrimSpace(x.Title)
+	if x.Summary == "" || t == "" || t != strings.ToUpper(t) || len(strings.Fields(t)) > 6 {
+		return x
+	}
+	first := x.Summary
+	if i := strings.IndexAny(first, ".!?"); i > 0 {
+		first = first[:i+1]
+	}
+	x.Title, x.Summary = strings.TrimSpace(first), ""
+	return x
 }

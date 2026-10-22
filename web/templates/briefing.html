@@ -7,6 +7,7 @@
 </li>{{end}}
 
 {{define "eitem"}}<li class="story">
+{{if eq .Bucket "safety"}}<p class="chips"><span class="badge">Safety</span></p>{{else if eq .Bucket "roads"}}<p class="chips"><span class="badge">Roads</span></p>{{end}}
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
 <span class="imeta">{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
 {{with .Summary}}<p class="isummary">{{.}}</p>{{end}}

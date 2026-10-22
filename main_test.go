@@ -767,3 +767,17 @@ func TestSummaryUnderAHeadlineIsAtMostTwoSentences(t *testing.T) {
 		}
 	}
 }
+
+func TestAPageTitleHeadlineIsReplacedByTheSummarysFirstSentence(t *testing.T) {
+	got := fixPageTitle(Item{Title: "DEPARTMENT OF METEOROLOGY", Summary: "A thunderstorm warning was issued for the west. People should stay indoors."})
+	if got.Title != "A thunderstorm warning was issued for the west." || got.Summary != "" {
+		t.Fatalf("%+v", got)
+	}
+	keep := Item{Title: "Severe lightning warning for 25 districts", Summary: "Warning."}
+	if fixPageTitle(keep) != keep {
+		t.Fatal("a normal headline is left alone")
+	}
+	if g := fixPageTitle(Item{Title: "DEPARTMENT OF METEOROLOGY"}); g.Title != "DEPARTMENT OF METEOROLOGY" {
+		t.Fatal("no summary, nothing to show instead")
+	}
+}
