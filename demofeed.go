@@ -68,7 +68,8 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		loc = time.UTC
 	}
 	var doc feedDoc
-	q := "?lang=en&summary=1&group=topic,day,bucket&order=severity&collapse=event&tz=" + tz
+	// the channel's raw stream ("Channel sources") repeats every item beside the stop topics and would fill the 50 rows a public read returns
+	q := "?lang=en&summary=1&group=topic,day,bucket&order=severity&collapse=event&tz=" + tz + "&q=" + url.QueryEscape(`-topic:"Channel sources"`)
 	if err := a.api.PublicGetURL(ctx, strings.SplitN(d.FeedURL, "?", 2)[0]+q, &doc); err != nil {
 		return nil, err
 	}
