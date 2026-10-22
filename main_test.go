@@ -265,7 +265,7 @@ func TestSignInUsesPKCEAndExchangesTheCode(t *testing.T) {
 	loc, _ := url.Parse(rec.Header().Get("Location"))
 	q := loc.Query()
 	if rec.Code != 302 || !strings.HasSuffix(loc.Path, "/oauth/authorize") || q.Get("client_id") != "wayfeed" || q.Get("code_challenge_method") != "S256" ||
-		q.Get("scope") != "channels:read channels:write items:read trips:write" || q.Get("redirect_uri") != "http://wayfeed.test/auth/callback" || !strings.HasSuffix(q.Get("resource"), "/api") || q.Get("response_type") != "code" {
+		q.Get("scope") != "channels:read channels:write items:read" || q.Get("redirect_uri") != "http://wayfeed.test/auth/callback" || !strings.HasSuffix(q.Get("resource"), "/api") || q.Get("response_type") != "code" {
 		t.Fatalf("%d %s", rec.Code, loc)
 	}
 	var ac *http.Cookie

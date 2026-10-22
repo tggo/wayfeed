@@ -3,7 +3,7 @@
 Wayfeed is a product built only on the public feedql API (`https://api.feedql.com`) and "Sign in with feedql".
 
 ## Sign in with feedql
-- OAuth authorization code with PKCE S256 as a public client (`wayfeed`, no secret), scopes `channels:read channels:write items:read trips:write` (Story 40.10; the last one only opens the alert push devices), resource `https://api.feedql.com/api`.
+- OAuth authorization code with PKCE S256 as a public client (`wayfeed`, no secret), scopes `channels:read channels:write items:read` (Story 40.10), resource `https://api.feedql.com/api`.
 - The tokens live in a sealed (AES-256-GCM) HttpOnly, SameSite=Lax cookie; the server keeps no state and no user store. The key (`WAYFEED_COOKIE_KEY`) is generated on the server by the deploy and is not in this repository.
 - An expired access token is refreshed with the refresh token; a refused refresh or a 401 clears the cookie and sends the person to sign in again.
 - State-changing requests from another origin are refused (403).
@@ -23,7 +23,7 @@ Wayfeed is a product built only on the public feedql API (`https://api.feedql.co
 
 ## PWA
 - Manifest, icon, service worker (static files cache-first; `/trip` network-first with an offline copy of the last page; sign-out clears the copy).
-- Web Push: the trip page has "Alerts on this device" (turn on, turn off, show a test notification, and a sentence saying what each does). Turning on asks the browser for permission, subscribes with feedql's public VAPID key (`GET /api/v1/alerts/push`), and gives the subscription to feedql (`POST /api/v1/alerts/push`, scope `trips:write`); turning off calls `DELETE` and unsubscribes. feedql sends the alerts; the service worker shows `{title, body}` and opens `/trip` on a tap. The device receives trip alerts only. A browser without push (iPhone outside the Home Screen app) is told so. The test notification is shown by the page itself and sends nothing.
+- Web Push: the trip page has "Alerts on this device" (turn on, turn off, show a test notification, and a sentence saying what each does). Turning on asks the browser for permission, subscribes with feedql's public VAPID key (`GET /api/v1/alerts/push`), and gives the subscription to feedql (`POST /api/v1/alerts/push`, scope `channels:write`); turning off calls `DELETE` and unsubscribes. feedql sends the alerts; the service worker shows `{title, body}` and opens `/trip` on a tap. The device receives trip alerts only. A browser without push (iPhone outside the Home Screen app) is told so. The test notification is shown by the page itself and sends nothing.
 
 ## Tests
 - `go test ./...` (86%+ coverage): sealed cookies, the PKCE request and the token exchange against a fake feedql, refresh and sign-out, every page and POST route, error passthrough, cross-site refusal. The planner script is checked by hand in a browser (phone and desktop screenshots).

@@ -28,8 +28,8 @@ type Config struct {
 }
 
 const (
-	// the scopes the app asks for: the channels it makes, their items, and the alert push devices (all generic routes)
-	scope      = "channels:read channels:write items:read trips:write"
+	// the scopes the app asks for: the channels it makes and their items; the alert push devices are on the same scopes
+	scope      = "channels:read channels:write items:read"
 	sessCookie = "wf_s"
 	authCookie = "wf_a"
 	sessAge    = 30 * 24 * time.Hour
