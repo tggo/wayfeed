@@ -1,9 +1,9 @@
 // Wayfeed service worker. Keeps the static files and the last trip page so a traveller with no signal still reads
 // the last briefing. Trip pages are fetched network-first; nothing else about the account is stored.
-const STATIC = 'wf-static-12';
+const STATIC = 'wf-static-13';
 const PAGES = 'wf-pages-8';
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(STATIC).then((c) => c.addAll(['/static/style.css?v=16', '/static/app.js?v=6', '/static/icon.svg'])).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(STATIC).then((c) => c.addAll(['/static/style.css?v=17', '/static/app.js?v=6', '/static/icon.svg'])).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== STATIC && k !== PAGES).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

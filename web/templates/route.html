@@ -6,7 +6,7 @@
 <span class="dot" aria-hidden="true">{{inc .Index}}</span>
 <span class="sname">{{.Name}}</span>
 {{if .From}}<span class="sdates">{{dateFmt .From}} to {{dateFmt .To}}</span>{{end}}
-<span class="scount">{{if or .Safety .Roads}}{{if .Safety}}<span class="c c-safety"><i aria-hidden="true"></i>{{.Safety}}<span class="vh"> safety {{if eq .Safety 1}}report{{else}}reports{{end}}</span></span>{{end}}{{if .Roads}}<span class="c c-roads"><i aria-hidden="true"></i>{{.Roads}}<span class="vh"> roads {{if eq .Roads 1}}report{{else}}reports{{end}}</span></span>{{end}}{{else}}<span class="c none">none reported</span>{{end}}</span>
+<span class="scount">{{if or .Safety .Roads}}{{if .Safety}}<span class="c c-safety"><i aria-hidden="true"></i>{{.Safety}}<span class="vh"> safety {{if eq .Safety 1}}report{{else}}reports{{end}}</span></span>{{end}}{{if .Roads}}<span class="c c-roads"><i aria-hidden="true"></i>{{.Roads}}<span class="vh"> roads {{if eq .Roads 1}}report{{else}}reports{{end}}</span></span>{{end}}{{else}}<span class="c none">No safety or roads reports</span>{{end}}</span>
 </a></li>{{end}}
 </ol>
 </nav>

@@ -305,3 +305,5 @@ body.p-demo,body.p-trip{--bg:#EEF2EE;--ink:#22303C;--mute:#4A5A68;--line:#C5CFCB
 }
 
 .confirm{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.confirm .btn{margin-right:8px}
+.c.none{text-align:center;line-height:1.2;font-size:.76rem}
+@media (max-width:640px){.stations li{flex-basis:5.5rem}.stn{padding-inline:2px}}
