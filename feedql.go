@@ -194,6 +194,65 @@ type Item struct {
 	SourceName string `json:"source_name"`
 	// Summary is feedql's one or two sentence summary in the reader's language, when it is written.
 	Summary string `json:"summary"`
+	// Pin is the point the story is about, when it has one (a town, a spot): the map shows it there. Area says which area a story with no
+	// point is about ("Western Province"). A story about a region or a country has no pin and is never put at a centroid.
+	Pin  *Pt    `json:"-"`
+	Area string `json:"-"`
+}
+
+// Place is a place a story is about, as feedql reads it (the _feedql.places of an item).
+type Place struct {
+	Name    string  `json:"name"`
+	Country string  `json:"country"`
+	Level   string  `json:"level"`
+	Lat     float64 `json:"lat"`
+	Lon     float64 `json:"lon"`
+}
+
+// Pt is a point on the map.
+type Pt struct {
+	Lat, Lon float64
+	Name     string
+}
+
+// locate picks the point a story is about: its most specific place that has coordinates and is not a region or a country. With none, the
+// story is about an area, and the name of its region (else its country) is returned for the list to say so.
+func locate(ps []Place) (*Pt, string) {
+	rank := map[string]int{"point": 4, "poi": 4, "city": 3, "town": 3, "area": 2}
+	var best *Pt
+	bestRank := 0
+	area, country := "", ""
+	for _, p := range ps {
+		switch p.Level {
+		case "country":
+			if country == "" {
+				country = p.Name
+			}
+			continue
+		case "admin1", "region":
+			if area == "" {
+				area = p.Name
+			}
+			continue
+		}
+		if p.Lat == 0 && p.Lon == 0 {
+			continue
+		}
+		r := rank[p.Level]
+		if r == 0 {
+			r = 1
+		}
+		if r > bestRank {
+			best, bestRank = &Pt{Lat: p.Lat, Lon: p.Lon, Name: p.Name}, r
+		}
+	}
+	if best != nil {
+		return best, ""
+	}
+	if area == "" {
+		area = country
+	}
+	return nil, area
 }
 
 // When is the day or days of the event a story reports (not when it was published).

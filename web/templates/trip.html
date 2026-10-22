@@ -1,25 +1,15 @@
 {{template "head" .}}
 {{with .Trip}}
 <section class="tripHead">
-<p class="eyebrow"><span class="badge {{.Trip.State}}">{{.Trip.State}}</span> {{if eq .Trip.State "pending"}}Collection starts {{dateFmt .Trip.CollectFrom}}{{else if eq .Trip.State "collecting"}}Collecting before your first stop{{else if eq .Trip.State "active"}}Your trip is on{{else}}Read only{{end}}</p>
 <h1 class="h2">{{.Name}}</h1>
-<p class="meta">Ends {{dateFmt .Trip.EndsOn}}. Deleted with everything collected for it on {{dateFmt .Trip.DeleteOn}}. Private: only you can see it.</p>
+<p class="meta"><span class="badge {{.Trip.State}}">{{.Trip.State}}</span> {{if eq .Trip.State "pending"}}Collection starts {{dateFmt .Trip.CollectFrom}}{{else if eq .Trip.State "collecting"}}Collecting before your first stop{{else if eq .Trip.State "active"}}Your trip is on{{else}}Read only{{end}}. Ends {{dateFmt .Trip.EndsOn}}. Deleted with everything collected for it on {{dateFmt .Trip.DeleteOn}}. Private: only you can see it.</p>
 {{if .Trip.Note}}<p class="note">{{.Trip.Note}}</p>{{end}}
-</section>
-
-<nav class="tabs" aria-label="Stops">
-{{$cur := $.Stop}}{{range $i, $s := .Trip.Stops}}<a href="/trip?stop={{$i}}" {{if eq $i $cur}}aria-current="page"{{end}}><b>{{$s.Name}}</b><span>{{dateFmt $s.From}} to {{dateFmt $s.To}}</span></a>{{end}}
-</nav>
-
-<section aria-labelledby="brief">
-<h2 id="brief">Near {{(index .Trip.Stops $.Stop).Name}}</h2>
-<p class="note">{{$.Disclaimer}}</p>
 {{if $.Partial}}<p class="note">Part of the briefing was not ready in time. Reload in a minute.</p>{{end}}
-{{if $.Brief.Note}}<p class="note">{{$.Brief.Note}}</p>{{end}}
-{{template "briefing" $.BV}}
 </section>
-
-<section aria-labelledby="alerts">
+{{end}}
+{{template "route" $.Route}}
+{{with .Trip}}
+<section class="below" aria-labelledby="alerts">
 <h2 id="alerts">Alerts</h2>
 {{range $.Alerts.Alerts}}<article class="alert sev{{.Severity}}">
 <p class="atitle"><b class="cap">{{.Bucket}}</b>{{if .Place}} near {{.Place}}{{end}}{{if .Official}} <span class="badge official">official source, not a warning from Wayfeed</span>{{end}}</p>
@@ -31,7 +21,7 @@
 {{range $.Alerts.Overflow}}<p class="note">{{.Line}}</p>{{end}}
 </section>
 
-<section aria-labelledby="push" id="pushbox" hidden>
+<section class="below" aria-labelledby="push" id="pushbox" hidden>
 <h2 id="push">Alerts on this device</h2>
 <p id="pushtext" class="empty"></p>
 <div class="actions"><button id="pushon" class="btn" type="button" hidden>Turn on alerts on this device</button><button id="pushoff" class="btn" type="button" hidden>Turn off alerts on this device</button><button id="pushtest" class="btn" type="button" hidden>Show a test notification</button></div>
@@ -39,7 +29,7 @@
 <p class="fine">Turning on asks this browser for permission and gives its push address to feedql, which then sends you the alerts of this trip here, and nothing else. Turning off deletes that address from feedql. The test notification is shown by this page only and sends nothing.</p>
 </section>
 
-<section aria-labelledby="end">
+<section class="below" aria-labelledby="end">
 <h2 id="end">End this trip</h2>
 <div class="endrow">
 {{if ne .Trip.State "archived"}}

@@ -53,7 +53,7 @@ func NewApp(cfg Config, api *API) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel, "sev": sevLabel, "lower": strings.ToLower, "when": whenText, "dow": dowFmt}).ParseFS(assets, "web/templates/*.html")
+	t, err := template.New("").Funcs(template.FuncMap{"initial": initial, "dateFmt": dateFmt, "src": srcLabel, "sev": sevLabel, "lower": strings.ToLower, "when": whenText, "dow": dowFmt, "key": itemKey, "inc": func(i int) int { return i + 1 }}).ParseFS(assets, "web/templates/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +110,8 @@ type BriefView struct {
 	Current        Group
 	Days           []DayGroup
 	Today          string
+	Index          int // the stop's place in the route
+	Own            int // stories listed for the stop itself (not from elsewhere)
 }
 
 // sevLabel says how serious a safety or roads story is, in words (never a verdict about a place).
@@ -349,7 +351,7 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 			}
 		}
 	}
-	cur, err := a.tripBrief(r.Context(), tok, t, stop)
+	briefs, failed, err := a.tripBriefs(r.Context(), tok, t)
 	if err != nil {
 		a.failAPI(w, r, err)
 		return
@@ -359,7 +361,7 @@ func (a *App) tripPage(w http.ResponseWriter, r *http.Request, tok string) {
 		a.failAPI(w, r, err)
 		return
 	}
-	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Stop": stop, "Brief": cur, "Disclaimer": demoDisclaimer, "Partial": false, "Alerts": al, "BV": BriefView{Name: t.Trip.Stops[stop].Name, Current: cur.Current, Days: newOnly(cur.Current, cur.Days), Today: time.Now().UTC().Format("2006-01-02")}})
+	a.page(w, r, http.StatusOK, "trip", map[string]any{"Trip": t, "Route": tripRoute(briefs, stop), "Disclaimer": demoDisclaimer, "Partial": failed > 0, "Alerts": al})
 }
 
 func itoa(n int) string {
@@ -532,7 +534,7 @@ func (a *App) sameOrigin(h http.HandlerFunc) http.HandlerFunc {
 func securityHeaders(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hd := w.Header()
-		hd.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://nominatim.openstreetmap.org; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://api.feedql.com")
+		hd.Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://nominatim.openstreetmap.org; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://api.feedql.com")
 		hd.Set("X-Content-Type-Options", "nosniff")
 		hd.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		h.ServeHTTP(w, r)

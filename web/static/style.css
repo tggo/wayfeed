@@ -153,3 +153,153 @@ details.dayblock .items{margin-bottom:10px}
 .story,.ititle,.orig{overflow-wrap:anywhere;min-width:0}
 .orig:lang(si),.orig:lang(ta),.orig:lang(ka),.orig:lang(ar),.orig:lang(hi),.orig:lang(th),.orig:lang(ja),.orig:lang(zh),.orig:lang(ko){font-style:normal}
 .sub{font-size:1.3rem}
+
+/* ---- route pages (/demo/<slug> and /trip): a field map, not a newspaper ---- */
+body.p-demo,body.p-trip{--bg:#EEF2EE;--ink:#22303C;--mute:#4A5A68;--line:#C5CFCB;--route:#2F5BEA;--panel:#E1E8E4;--flag:#E8A317;
+  --safety:#D7263D;--roads:#E8A317;--events:#0F8B8D;--bgc:#6B7884;--glyph:#fff;--halo:#fff;--ring:#22303C;--sel:#DCE5FF;
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;--lineH:92px;--stickyH:100px}
+@media (prefers-color-scheme:dark){body.p-demo,body.p-trip{--bg:#141C22;--ink:#E3E9E6;--mute:#9FB0BC;--line:#2C3A44;--route:#7C9BFF;--panel:#1C2830;--flag:#F2B93B;
+  --safety:#FF6B7F;--roads:#F2B93B;--events:#35C2C4;--bgc:#8A97A3;--glyph:#141C22;--halo:#141C22;--ring:#E3E9E6;--sel:#22314F}}
+.p-demo .wrap,.p-trip .wrap{max-width:96rem}
+.p-demo .brand,.p-trip .brand{font:700 1.2rem "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:0}
+.p-demo h1,.p-demo h2,.p-demo h3,.p-trip h1,.p-trip h2,.p-trip h3{font-family:"Bricolage Grotesque",system-ui,sans-serif}
+.p-demo .tripHead,.p-trip .tripHead{padding:2px 0 14px}
+.p-demo .tripHead .h2,.p-trip .tripHead .h2{font:700 clamp(1.7rem,3.6vw,2.6rem)/1.08 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.015em;margin:.1em 0 .3em}
+.p-demo .tripHead .meta,.p-trip .tripHead .meta{margin:0 0 .8rem;max-width:52rem}
+.p-demo .tripHead .cta{margin:0}
+.p-demo .btn.primary,.p-trip .btn.primary{color:#fff}
+@media (prefers-color-scheme:dark){.p-demo .btn.primary,.p-trip .btn.primary{color:#141C22}}
+.p-demo .badge,.p-trip .badge{border-radius:4px;text-transform:none;font-weight:700}
+.p-demo .note,.p-trip .note{border-left-color:var(--roads)}
+
+/* the route line: stations on a line, and the page's navigation */
+.line{position:sticky;top:0;z-index:30;background:var(--bg);border-block:1px solid var(--line);margin-inline:-16px;padding-inline:16px}
+.stations{display:flex;list-style:none;margin:0;padding:0;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin}
+.stations li{flex:1 0 6.8rem;position:relative;scroll-snap-align:center;min-width:0}
+.stations li::before{content:"";position:absolute;left:0;right:0;top:27px;height:4px;background:var(--route)}
+.stations li:first-child::before{left:50%}
+.stations li:last-child::before{right:50%}
+.stations li:only-child::before{display:none}
+.stn{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;padding:10px 4px 8px;min-height:48px;color:var(--ink);text-decoration:none;border-radius:6px}
+.stn:hover .sname{text-decoration:underline}
+.stn:focus-visible{outline:3px solid var(--route);outline-offset:-3px}
+.dot{display:inline-grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:var(--bg);border:3px solid var(--route);color:var(--ink);font:700 .95rem/1 "Bricolage Grotesque",system-ui,sans-serif;box-shadow:0 0 0 3px var(--bg)}
+.stn[aria-current] .dot{background:var(--route);color:#fff}
+@media (prefers-color-scheme:dark){.stn[aria-current] .dot{color:#141C22}}
+.stn .sname{font:700 1rem/1.15 "Bricolage Grotesque",system-ui,sans-serif;margin-top:4px;overflow-wrap:anywhere}
+.stn[aria-current] .sname{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:4px;text-decoration-color:var(--route)}
+.stn .sdates{font-size:.78rem;color:var(--mute);line-height:1.2}
+.scount{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 8px;font-size:.8rem;margin-top:2px;min-height:1.1em}
+.c{display:inline-flex;align-items:center;gap:4px;font-weight:700}
+.c.none{font-weight:400;color:var(--mute)}
+.c i,.sw,.k{display:inline-block;flex:none;width:11px;height:11px;border:2px solid var(--ring);box-sizing:content-box;border-radius:50%;background:var(--bgc);margin:0}
+.c-safety i,.bk-safety .sw,.k-safety{background:var(--safety)}
+.c-roads i,.bk-roads .sw,.k-roads{background:var(--roads);border-radius:2px;transform:rotate(45deg) scale(.85)}
+.bk-events .sw,.k-events{background:var(--events)}
+.bk-background .sw,.k-background{background:var(--bgc);width:7px;height:7px}
+.k-official{background:var(--bg);box-shadow:0 0 0 2px var(--halo),0 0 0 4px var(--ring);width:7px;height:7px;margin:0 4px 0 2px}
+
+/* map and list */
+.rbody{display:block}
+.rmap{position:sticky;top:var(--lineH);z-index:20;height:var(--mapH,42vh);min-height:150px;display:flex;flex-direction:column;margin-inline:-16px;background:var(--bg)}
+.mapbox{position:relative;flex:1;min-height:0}
+.rmapel{position:absolute;inset:0;isolation:isolate;background:var(--panel)}
+.legend{position:absolute;left:8px;bottom:8px;z-index:500;display:flex;flex-wrap:wrap;gap:2px 12px;list-style:none;margin:0;padding:4px 8px;background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:6px;font-size:.78rem;max-width:calc(100% - 100px)}
+.legend li{display:inline-flex;align-items:center;gap:5px}
+.grip{flex:none;display:grid;place-items:center;height:44px;width:100%;margin:0;padding:0;border:0;border-top:1px solid var(--line);border-radius:14px 14px 0 0;background:var(--bg);cursor:ns-resize;touch-action:none;margin-top:-22px;position:relative;z-index:2}
+.grip span{width:44px;height:5px;border-radius:3px;background:var(--mute)}
+.grip:focus-visible{outline:3px solid var(--route);outline-offset:-3px}
+.rlist{padding:6px 0 48px;min-width:0}
+@media (min-width:900px){
+  .rbody{display:grid;grid-template-columns:minmax(0,58fr) minmax(0,42fr);gap:32px;align-items:start}
+  .rmap{top:calc(var(--lineH) + 10px);height:calc(100vh - var(--lineH) - 24px);margin:10px 0 0;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .grip{display:none}
+  .rlist{padding-top:0}
+}
+.rp.nomap .rbody{display:block}
+.stopsec{padding:0;scroll-margin-top:calc(var(--stickyH) + 6px)}
+.stopsec:first-child .sechead{margin-top:14px}
+.sechead{display:flex;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:4px 12px;margin:36px 0 4px;padding:12px 0 0;border-top:4px solid var(--ink)}
+.sechead h2{font:700 1.7rem/1.1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.01em;margin:0}
+.sechead .sdates{margin:0;color:var(--mute);font-size:.95rem;max-width:none}
+.sechead .dot{width:32px;height:32px;box-shadow:none}
+.p-demo .sub,.p-trip .sub{display:flex;align-items:center;gap:12px;font:700 1.05rem "Bricolage Grotesque",system-ui,sans-serif;margin:1.5rem 0 .3rem;color:var(--ink)}
+.p-demo .sub::after,.p-trip .sub::after{content:"";flex:1;height:1px;background:var(--line)}
+.p-demo .bk,.p-trip .bk{display:flex;align-items:center;gap:9px;font:700 1rem "Bricolage Grotesque",system-ui,sans-serif;text-transform:none;letter-spacing:0;color:var(--ink);margin:1.1rem 0 .2rem}
+.p-demo .items,.p-trip .items{gap:0;max-width:44rem}
+.p-demo .items li,.p-trip .items li{background:none;border-radius:0;border-left:4px solid var(--bk,var(--bgc));padding:11px 4px 11px 14px;margin-bottom:6px;gap:3px;transition:background-color .12s}
+.p-demo .items li+li,.p-trip .items li+li{border-top:0}
+.b-safety{--bk:var(--safety)}.b-roads{--bk:var(--roads)}.b-events{--bk:var(--events)}.b-background{--bk:var(--bgc)}
+.story{scroll-margin-top:calc(var(--stickyH) + 12px)}
+.story:hover,.story.hl{background:var(--panel)!important}
+.story.sel{background:var(--sel)!important;box-shadow:inset 0 0 0 2px var(--route)}
+.story:focus{outline:none}
+.story:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+.story.off{border-left-style:double;border-left-width:7px}
+.p-demo .ititle,.p-trip .ititle{font-weight:700;font-size:1.05rem;line-height:1.3;color:var(--ink)}
+.p-demo .ititle:hover,.p-trip .ititle:hover{color:var(--route)}
+.p-demo .ititle:focus-visible,.p-trip .ititle:focus-visible{outline:3px solid var(--route);outline-offset:2px;border-radius:2px}
+.where{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;color:var(--mute)}
+.where::before{content:"";width:8px;height:8px;border:2px solid var(--route);border-radius:50%;box-sizing:border-box;flex:none}
+.where.area{font-style:italic}
+.where.area::before{border-style:dashed}
+.p-demo details.dayblock,.p-trip details.dayblock{border:0;border-top:1px solid var(--line);border-radius:0;background:none;padding:0 2px;max-width:44rem}
+.p-demo .elsewhere,.p-trip .elsewhere{border-top:1px dashed var(--line);margin-top:1.4rem;padding:0}
+.below{max-width:46rem;padding-top:1.2rem;margin-top:.4rem;border-top:4px solid var(--ink)}
+.below h2{font:700 1.4rem "Bricolage Grotesque",system-ui,sans-serif}
+
+/* map furniture (Leaflet divIcons) */
+.mkw{background:none!important;border:0!important}
+.mk{display:grid;place-items:center;width:100%;height:100%}
+.mk i{display:grid;place-items:center;width:20px;height:20px;box-sizing:border-box;border:2px solid var(--ring);border-radius:50%;background:var(--mkc,var(--bgc));color:var(--glyph);font:700 13px/1 "Atkinson Hyperlegible",system-ui,sans-serif;font-style:normal;box-shadow:0 0 0 2px var(--halo);transition:transform .12s}
+.mk-safety{--mkc:var(--safety)}.mk-roads{--mkc:var(--roads)}.mk-events{--mkc:var(--events)}.mk-background{--mkc:var(--bgc)}
+.mk-safety i::after{content:"!"}
+.mk-roads i{border-radius:4px;transform:rotate(45deg);color:#22303C}
+.mk-background i{width:13px;height:13px}
+.mk-s3 i{width:26px;height:26px}.mk-s2 i{width:23px;height:23px}
+.mk-off i{box-shadow:0 0 0 2px var(--halo),0 0 0 4px var(--ring),0 0 0 5px var(--halo)}
+.mk-far i{opacity:.82}
+.mk-hl{z-index:1000!important}
+.mk-hl i{transform:scale(1.45)}
+.mk-roads.mk-hl i{transform:rotate(45deg) scale(1.45)}
+.mk-sel i{outline:3px solid var(--route);outline-offset:3px}
+.mcl{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--ink);color:var(--bg);font:700 .9rem "Bricolage Grotesque",system-ui,sans-serif;box-shadow:0 0 0 2px var(--halo)}
+.stm{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:var(--route);color:#fff;font:700 .95rem "Bricolage Grotesque",system-ui,sans-serif;border:3px solid var(--halo);box-shadow:0 0 0 2px var(--route)}
+@media (prefers-color-scheme:dark){.stm{color:#141C22}
+  .rmapel .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.55)}
+  .rmapel.leaflet-container{background:#1b2227}}
+.rmapel .leaflet-control-attribution{font:11px "Atkinson Hyperlegible",system-ui,sans-serif;background:color-mix(in srgb,var(--bg) 88%,transparent);color:var(--mute)}
+.rmapel .leaflet-control-attribution a{color:var(--route)}
+.rmapel .leaflet-bar a.leaflet-control-zoom-in,.rmapel .leaflet-bar a.leaflet-control-zoom-out{width:44px;height:44px;line-height:44px;font-size:20px}
+.rmapel .leaflet-container:focus-visible,.rmapel:focus-visible{outline:3px solid var(--route);outline-offset:-3px}
+.leaflet-container{font-family:inherit}
+@media (max-width:640px){
+  .legend{font-size:.72rem;gap:0 9px;padding:3px 6px;max-width:calc(100% - 70px)}
+  .stations li{flex-basis:6.3rem}
+  .sechead h2{font-size:1.5rem}
+}
+@media (prefers-reduced-motion:reduce){.mk i,.story{transition:none}}
+.rp:not(.js) .rmap{display:none}
+.rp:not(.js) .rbody{display:block}
+.mk-hl .mcl{transform:scale(1.2)}
+@media (max-width:640px){
+  .p-demo .tripHead,.p-trip .tripHead{padding-bottom:8px}
+  .p-demo .tripHead .h2,.p-trip .tripHead .h2{font-size:1.45rem;margin:0 0 .25em}
+  .p-demo .tripHead .meta,.p-trip .tripHead .meta{font-size:.9rem;margin-bottom:.5rem}
+  .p-demo .cta .fine{display:none}
+  .p-demo header.top,.p-trip header.top{padding:8px 0}
+}
+
+.p-demo footer a,.p-trip footer a{min-height:44px;display:inline-flex;align-items:center}
+.line{position:sticky}
+.line::after{content:"";position:absolute;right:0;top:0;bottom:0;width:18px;background:linear-gradient(90deg,transparent,var(--bg));pointer-events:none}
+@media (min-width:900px){.line::after{display:none}}
+@media (max-width:640px){
+  .rmap{height:var(--mapH,36vh)}
+  .stations{scrollbar-width:none}
+  .stations::-webkit-scrollbar{display:none}
+  .stn .sdates{display:none}
+  .legend li:nth-child(n+4){display:none}
+  .sechead{margin-top:20px}
+  .legend{max-width:calc(100% - 20px);bottom:auto;top:8px;left:auto;right:8px;flex-direction:column}
+}

@@ -1,24 +1,14 @@
 {{template "head" .}}
 {{with .Demo}}
 <section class="tripHead">
-<p class="eyebrow"><span class="badge active">Example</span> Updated every day, so it always shows now</p>
 <h1 class="h2">{{.Name}}</h1>
-<p class="meta">Read-only example. It belongs to no one, and nothing personal is in it.</p>
-<p class="cta"><a class="btn" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your own stops and dates, and get alerts.</span></p>
+<p class="meta"><span class="badge active">Example</span> Read only, belongs to no one, and updated every day so it always shows now.</p>
+<p class="cta"><a class="btn primary" href="/login">Build your own trip</a><span class="fine">Sign in with feedql, mark your own stops and dates, and get alerts.</span></p>
 </section>
-
-<nav class="tabs" aria-label="Stops">
-{{$cur := $.Stop}}{{range $i, $s := .Stops}}<a href="/demo/{{$.Slug}}?stop={{$i}}" {{if eq $i $cur}}aria-current="page"{{end}}><b>{{$s.Name}}</b>{{if $s.From}}<span>{{dateFmt $s.From}} to {{dateFmt $s.To}}</span>{{end}}</a>{{end}}
-</nav>
-
-<section aria-labelledby="brief">
-<h2 id="brief">Near {{$.Cur.Name}}</h2>
-<p class="note">{{.Disclaimer}}</p>
-{{if $.Cur.Note}}<p class="note">{{$.Cur.Note}}</p>{{end}}
-{{template "briefing" $.BV}}
-</section>
-
-<section aria-labelledby="alerts">
+{{end}}
+{{template "route" .Route}}
+{{with .Demo}}
+<section class="below" aria-labelledby="alerts">
 <h2 id="alerts">Alerts on this route</h2>
 {{range .Alerts}}<article class="alert sev{{.Severity}}">
 <p class="atitle"><b class="cap">{{.Bucket}}</b>{{if .Place}} near {{.Place}}{{end}}{{if .Official}} <span class="badge official">official source, not a warning from Wayfeed</span>{{end}}</p>

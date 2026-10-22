@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -265,10 +266,28 @@ func tripZone(s Stop) string {
 
 type groupedItems struct {
 	Groups []struct {
-		Day    string `json:"day"`
-		Bucket string `json:"bucket"`
-		Items  []Item `json:"items"`
+		Day    string     `json:"day"`
+		Bucket string     `json:"bucket"`
+		Items  []tripItem `json:"items"`
 	} `json:"groups"`
+}
+
+// tripItem is an item of a private channel read: the item and the places it is about (beside it, or under _feedql as the public feed has them).
+type tripItem struct {
+	Item
+	Places []Place `json:"places"`
+	FQ     struct {
+		Places []Place `json:"places"`
+	} `json:"_feedql"`
+}
+
+func (t tripItem) item() Item {
+	ps := t.Places
+	if len(ps) == 0 {
+		ps = t.FQ.Places
+	}
+	t.Item.Pin, t.Item.Area = locate(ps)
+	return t.Item
 }
 
 const privateBackgroundMax = 5
@@ -279,6 +298,42 @@ func (a *App) tripBrief(ctx context.Context, tok string, t *TripView, stop int) 
 	if err != nil || stop < 0 || stop >= len(stops) {
 		return StopBrief{}, err
 	}
+	return a.stopBrief(ctx, tok, t, stops, ids, stop)
+}
+
+// tripBriefs reads every stop's stories at once (the route page lays all stops out on one map and list). A stop whose read failed has an
+// empty brief and is counted in failed; only when every stop failed is that an error.
+func (a *App) tripBriefs(ctx context.Context, tok string, t *TripView) (briefs []StopBrief, failed int, err error) {
+	stops, ids, err := a.tripStops(ctx, tok, t.ID)
+	if err != nil {
+		return nil, 0, err
+	}
+	briefs = make([]StopBrief, len(stops))
+	errs := make([]error, len(stops))
+	var wg sync.WaitGroup
+	for i := range stops {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			briefs[i], errs[i] = a.stopBrief(ctx, tok, t, stops, ids, i)
+		}()
+	}
+	wg.Wait()
+	var first error
+	for i, e := range errs {
+		if e != nil {
+			failed++
+			first = e
+			briefs[i] = StopBrief{Index: i, Stop: stops[i], Items: []Item{}, Days: []DayGroup{}}
+		}
+	}
+	if len(stops) > 0 && failed == len(stops) {
+		return nil, failed, first
+	}
+	return briefs, failed, nil
+}
+
+func (a *App) stopBrief(ctx context.Context, tok string, t *TripView, stops []Stop, ids []string, stop int) (StopBrief, error) {
 	st := stops[stop]
 	tz := tripZone(st)
 	q := url.Values{"q": {"topic:" + ids[stop]}, "group": {"day,bucket"}, "order": {"severity"}, "collapse": {"event"}, "tz": {tz}, "lang": {"en"}, "summary": {"1"}, "limit": {"200"}}
@@ -303,7 +358,8 @@ func (a *App) tripBrief(ctx context.Context, tok string, t *TripView, stop int) 
 		if target == nil {
 			continue
 		}
-		for _, it := range g.Items {
+		for _, ti := range g.Items {
+			it := ti.item()
 			if it.Title == "" {
 				continue
 			}

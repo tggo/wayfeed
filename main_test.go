@@ -88,14 +88,14 @@ func newFake(t *testing.T) *fakeFeedql {
 		_, _ = w.Write([]byte(`{"dry_run":false,"plan":{"name":"Trip: Kandy"},"channel":{"id":"ch_1"}}`))
 	}))
 	mux.HandleFunc("GET /c/ch_1/items", api(func(w http.ResponseWriter, r *http.Request) {
-		today := time.Now().UTC().Format("2006-01-02")
+		today := todayIn("Asia/Colombo")
 		f.queries = append(f.queries, r.URL.RawQuery)
 		if strings.Contains(r.URL.Query().Get("q"), "t_ella") {
 			_, _ = w.Write([]byte(`{"items":[],"groups":[]}`))
 			return
 		}
 		_, _ = w.Write([]byte(`{"groups":[
-		{"day":"` + today + `","bucket":"safety","items":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"site","source_name":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true,"summary":"The curfew ended. Shops reopened."}]},
+		{"day":"` + today + `","bucket":"safety","items":[{"id":"i1","url":"https://news.example/1","title":"Curfew lifted in Kandy","title_original":"ගමන් තහනම","lang_original":"si","source":"site","source_name":"adaderana.lk","published":"2026-10-21T08:00:00Z","translated":{"from":"si","low":true},"bucket":"safety","severity":3,"official":true,"summary":"The curfew ended. Shops reopened.","places":[{"name":"Kandy","country":"LK","level":"city","lat":7.29,"lon":80.63}]}]},
 		{"day":"` + today + `","bucket":"events","items":[{"id":"i2","url":"https://news.example/2","title":"Perahera dates announced","source":"site","source_name":"dailymirror.lk","published":"2026-10-21T07:00:00Z","bucket":"events","when":{"start":"2026-10-25","end":"2026-10-27","status":"scheduled"}},{"id":"i4","url":"https://news.example/4","title":"Night market cancelled","source":"site","source_name":"island.lk","published":"2026-10-21T06:00:00Z","bucket":"events","when":{"start":"2026-10-22","end":"2026-10-22","status":"cancelled"}}]},
 		{"day":"` + today + `","bucket":"background","items":[{"id":"i3","url":"https://news.example/3","title":"Rail strike ends","source":"site","source_name":"island.lk","published":"2026-10-20T07:00:00Z","bucket":"background"}]}]}`))
 	}))
@@ -118,14 +118,14 @@ func newFake(t *testing.T) *fakeFeedql {
 			w.WriteHeader(503)
 			return
 		}
-		today := time.Now().UTC().Format("2006-01-02")
+		today := todayIn("Asia/Colombo")
 		if strings.Contains(r.URL.Query().Get("q"), "country:") { // the country fallback read
 			_, _ = w.Write([]byte(`{"items":[{"id":"c1","url":"https://news.example/c1","title":"Lightning warning for 25 districts","summary":"A lightning warning was issued.","_feedql":{"topic":"Channel sources","bucket":"safety","severity":2,"source_name":"newswire.lk"}}]}`))
 			return
 		}
 		_, _ = w.Write([]byte(`{"items":[
-		{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","summary":"The curfew ended. Shops reopened. Buses run again.","date_published":"2026-10-21T08:00:00Z","_feedql":{"topic":"Colombo","bucket":"safety","severity":3,"official":true,"source_name":"adaderana.lk","lang_original":"si","title_original":"ගමන් තහනම","translated":{"from":"si","low":true}}},
-		{"id":"2","url":"https://dailymirror.lk/2","title":"Landslide closes the Kandy road","date_published":"2026-10-21T09:00:00Z","_feedql":{"topic":"Colombo","bucket":"roads","severity":3,"official":true,"source_name":"dmc.gov.lk"}}],
+		{"id":"1","url":"https://adaderana.lk/1","title":"Curfew lifted in Colombo","summary":"The curfew ended. Shops reopened. Buses run again.","date_published":"2026-10-21T08:00:00Z","_feedql":{"topic":"Colombo","places":[{"name":"Sri Lanka","country":"LK","level":"country"},{"name":"Colombo","country":"LK","level":"city","lat":6.93,"lon":79.86}],"bucket":"safety","severity":3,"official":true,"source_name":"adaderana.lk","lang_original":"si","title_original":"ගමන් තහනම","translated":{"from":"si","low":true}}},
+		{"id":"2","url":"https://dailymirror.lk/2","title":"Landslide closes the Kandy road","date_published":"2026-10-21T09:00:00Z","_feedql":{"topic":"Colombo","places":[{"name":"Western Province","country":"LK","level":"admin1"},{"name":"Sri Lanka","country":"LK","level":"country"}],"bucket":"roads","severity":3,"official":true,"source_name":"dmc.gov.lk"}}],
 		"_feedql_groups":[{"day":"` + today + `","bucket":"safety","topic":"Colombo","items":["1"]},{"day":"` + today + `","bucket":"roads","topic":"Colombo","items":["2"]}]}`))
 	})
 	mux.HandleFunc("GET /api/v1/alerts/push", api(func(w http.ResponseWriter, r *http.Request) {
@@ -332,7 +332,7 @@ func TestTripPageShowsStopsBriefingAndAlertsFromTheGenericAPI(t *testing.T) {
 	c := signedIn(t, app, live())
 	rec := do(h, "GET", "/trip", "", c)
 	b := rec.Body.String()
-	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="page"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Reported as serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Thu 5 Nov", "Landslide on the Kandy road", "official source", "not an official warning", "Archive this trip", "Delete this trip",
+	for _, want := range []string{"Sri Lanka", "Kandy", "Ella", `aria-current="location"`, "Curfew lifted in Kandy", "translated from si (check the original)", "ගමන් තහනම", "Right now", "Day by day", "Reported as serious", "official source", "Cancelled", "25 to 27 Oct", "Perahera dates announced", "Thu 5 Nov", "Landslide on the Kandy road", "official source", "not an official warning", "Archive this trip", "Delete this trip",
 		"Sources are refreshed about every 20 minutes", `content="noindex,nofollow"`} {
 		if !strings.Contains(b, want) {
 			t.Errorf("missing %q", want)
@@ -591,7 +591,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 	rec := do(h, "GET", "/demo/sri-lanka", "")
 	b = rec.Body.String()
 	for _, want := range []string{"Sri Lanka: Colombo, Kandy, Ella", "Example", "Curfew lifted in Colombo", "The curfew ended. Shops reopened.", "translated from si (check the original)", "ගමන් තහනම",
-		"Landslide closes the Kandy road", "official source", "not an official warning", "Build your own trip", `aria-current="page"`, `content="index,follow"`, `href="https://wayfeed.app/demo/sri-lanka"`,
+		"Landslide closes the Kandy road", "official source", "not an official warning", "Build your own trip", `aria-current="location"`, `content="index,follow"`, `href="https://wayfeed.app/demo/sri-lanka"`,
 		"Not near Colombo", "Lightning warning for 25 districts"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("demo misses %q", want)
@@ -656,7 +656,7 @@ func TestNewOnlyDropsWhatRightNowAlreadyShows(t *testing.T) {
 
 // Story 40.10: a demo with a feed_url is read through the generic public feed, grouped by feedql, with summaries.
 func TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground(t *testing.T) {
-	today := time.Now().UTC().Format("2006-01-02")
+	today := todayIn("Asia/Tbilisi")
 	var query string
 	mux := http.NewServeMux()
 	var srv *httptest.Server
@@ -709,7 +709,7 @@ func TestDemoPageReadsThePublicFeedWithSummariesAndCapsBackground(t *testing.T) 
 }
 
 func TestDatesChangedBadgeNeedsANewerReportOfTheEvent(t *testing.T) {
-	today := time.Now().UTC().Format("2006-01-02")
+	today := todayIn("Asia/Tbilisi")
 	mux := http.NewServeMux()
 	var srv *httptest.Server
 	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {

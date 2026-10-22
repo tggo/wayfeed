@@ -31,10 +31,15 @@
 <meta name="twitter:description" content="{{$desc}}">
 <meta name="twitter:image" content="{{$img}}">
 <meta name="twitter:image:alt" content="Wayfeed: local news for your route, translated. A route with stops on a map.">
-<link rel="stylesheet" href="/static/style.css?v=12">
+<link rel="stylesheet" href="/static/style.css?v=16">
+{{if or (eq .Page "demo") (eq .Page "trip")}}<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
+{{end}}
 {{if eq .Page "new"}}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">{{end}}
 </head>
-<body>
+<body class="p-{{.Page}}">
 <a class="skip" href="#main">Skip to content</a>
 <div class="wrap">
 <header class="top">
@@ -49,6 +54,9 @@
 <p>Built on <a href="https://feedql.com">feedql.com</a> and open source on <a href="https://github.com/tggo/wayfeed">GitHub</a>. Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</p>
 </footer>
 </div>
-<script src="/static/app.js?v=4" defer></script>
+<script src="/static/app.js?v=5" defer></script>
+{{if or (eq .Page "demo") (eq .Page "trip")}}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
+<script src="/static/route.js?v=4" defer></script>{{end}}
 </body>
 </html>{{end}}

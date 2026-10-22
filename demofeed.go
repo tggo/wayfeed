@@ -30,16 +30,17 @@ type feedDoc struct {
 		Summary       string `json:"summary"`
 		DatePublished string `json:"date_published"`
 		FQ            struct {
-			Source        string `json:"source"`
-			SourceName    string `json:"source_name"`
-			Topic         string `json:"topic"`
-			Bucket        string `json:"bucket"`
-			Severity      int    `json:"severity"`
-			Official      bool   `json:"official"`
-			When          *When  `json:"when"`
-			Lang          string `json:"lang"`
-			LangOriginal  string `json:"lang_original"`
-			TitleOriginal string `json:"title_original"`
+			Source        string  `json:"source"`
+			SourceName    string  `json:"source_name"`
+			Topic         string  `json:"topic"`
+			Bucket        string  `json:"bucket"`
+			Severity      int     `json:"severity"`
+			Official      bool    `json:"official"`
+			When          *When   `json:"when"`
+			Lang          string  `json:"lang"`
+			LangOriginal  string  `json:"lang_original"`
+			TitleOriginal string  `json:"title_original"`
+			Places        []Place `json:"places"`
 			Translated    *struct {
 				From string `json:"from"`
 				Low  bool   `json:"low"`
@@ -89,6 +90,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		if x.Source == "" {
 			x.Source = it.FQ.Source
 		}
+		x.Pin, x.Area = locate(it.FQ.Places)
 		if it.FQ.Translated != nil {
 			x.Translated = &struct {
 				From string `json:"from"`
@@ -123,7 +125,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 func (a *App) layOutStops(d DemoListItem, names []string, all bool, doc feedDoc, items map[string]Item, pending map[string]int, days []string, today string) *DemoTrip {
 	t := &DemoTrip{Slug: d.Slug, Name: d.Name, Alerts: []DemoAlert{}, Disclaimer: demoDisclaimer, GeneratedAt: time.Now().UTC()}
 	for _, name := range names {
-		st := DemoStop{Stop: Stop{Name: name}, Items: []Item{}, Days: []DayGroup{}, Pending: pending[name]}
+		st := DemoStop{Stop: demoStopOf(d, name), Items: []Item{}, Days: []DayGroup{}, Pending: pending[name]}
 		if all {
 			for _, n := range pending {
 				st.Pending += n
@@ -270,6 +272,7 @@ func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
 		if x.Source == "" {
 			x.Source = it.FQ.Source
 		}
+		x.Pin, x.Area = locate(it.FQ.Places)
 		if it.FQ.Translated != nil {
 			x.Translated = &struct {
 				From string `json:"from"`
@@ -313,4 +316,14 @@ func fixPageTitle(x Item) Item {
 	}
 	x.Title, x.Summary = strings.TrimSpace(first), ""
 	return x
+}
+
+// demoStopOf is a stop of a demo with its point and radius from the configuration, when the route lists it.
+func demoStopOf(d DemoListItem, name string) Stop {
+	for _, p := range d.Places {
+		if p.Name == name {
+			return Stop{Name: name, Country: p.Country, Admin: p.Admin, Lat: p.Lat, Lon: p.Lon, RadiusKm: p.RadiusKm}
+		}
+	}
+	return Stop{Name: name}
 }

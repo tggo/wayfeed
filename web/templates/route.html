@@ -1,0 +1,30 @@
+{{define "route"}}
+<div class="rp{{if not .HasMap}} nomap{{end}}" id="rp">
+<nav class="line" id="line" aria-label="Stops on the route">
+<ol class="stations">
+{{range .Stops}}<li><a class="stn" href="#stop-{{.Index}}" data-stop="{{.Index}}"{{if eq .Index $.Cur}} aria-current="location"{{end}}>
+<span class="dot" aria-hidden="true">{{inc .Index}}</span>
+<span class="sname">{{.Name}}</span>
+{{if .From}}<span class="sdates">{{dateFmt .From}} to {{dateFmt .To}}</span>{{end}}
+<span class="scount">{{if or .Safety .Roads}}{{if .Safety}}<span class="c c-safety"><i aria-hidden="true"></i>{{.Safety}}<span class="vh"> safety {{if eq .Safety 1}}report{{else}}reports{{end}}</span></span>{{end}}{{if .Roads}}<span class="c c-roads"><i aria-hidden="true"></i>{{.Roads}}<span class="vh"> roads {{if eq .Roads 1}}report{{else}}reports{{end}}</span></span>{{end}}{{else}}<span class="c none">none reported</span>{{end}}</span>
+</a></li>{{end}}
+</ol>
+</nav>
+<div class="rbody">
+{{if .HasMap}}<div class="rmap" id="rmapwrap">
+<div class="mapbox">
+<div id="rmap" class="rmapel" role="region" aria-label="Map of the route and the stories that have a place"></div>
+<ul class="legend" aria-label="Map key"><li><i class="k k-safety" aria-hidden="true"></i>Safety</li><li><i class="k k-roads" aria-hidden="true"></i>Roads</li><li><i class="k k-events" aria-hidden="true"></i>Events</li><li><i class="k k-background" aria-hidden="true"></i>Background</li><li><i class="k k-official" aria-hidden="true"></i>Official source</li></ul>
+</div>
+<button class="grip" id="grip" type="button" role="separator" aria-orientation="horizontal" aria-label="Map height. Arrow up makes the map smaller, arrow down makes it bigger." aria-valuemin="20" aria-valuemax="70" aria-valuenow="36"><span aria-hidden="true"></span></button>
+</div>{{end}}
+<div class="rlist" id="rlist">
+{{range .Stops}}<section class="stopsec" id="stop-{{.Index}}" data-stop="{{.Index}}" aria-labelledby="stop-{{.Index}}-h">
+<header class="sechead"><span class="dot" aria-hidden="true">{{inc .Index}}</span><h2 id="stop-{{.Index}}-h">{{.Name}}</h2>{{if .From}}<p class="sdates">{{dateFmt .From}} to {{dateFmt .To}}</p>{{end}}</header>
+{{template "briefing" .Brief}}
+</section>{{end}}
+</div>
+</div>
+</div>
+<script type="application/json" id="rdata">{{.Data}}</script>
+{{end}}

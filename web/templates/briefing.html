@@ -1,30 +1,37 @@
-{{define "item"}}<li class="story">
+{{define "where"}}{{with .Pin}}<span class="where">Near {{.Name}}</span>{{else}}{{with .Area}}<span class="where area">Across {{.}}, so not on the map</span>{{end}}{{end}}{{end}}
+
+{{define "item"}}<li class="story b-{{.Bucket}}{{if .Official}} off{{end}}" data-item="{{key .ID}}" tabindex="-1">
 {{if or .Official .When}}<p class="chips">{{if .Official}}<span class="badge official">official source</span>{{end}}{{if .When}}{{if eq .When.Status "cancelled"}}<span class="badge cancelled">Cancelled</span>{{else if and (eq .When.Status "changed") .When.From}}<span class="badge changed">Dates changed</span>{{end}}{{end}}</p>{{end}}
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
 <span class="imeta">{{with sev .Severity}}<b class="sevtext">Reported as {{lower .}}</b> &middot; {{end}}{{with when .When}}<b>{{.}}</b> &middot; {{end}}{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+{{template "where" .}}
 {{with .Summary}}<p class="isummary">{{.}}</p>{{end}}
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 
-{{define "eitem"}}<li class="story">
+{{define "eitem"}}<li class="story b-{{.Bucket}}{{if .Official}} off{{end}}" data-item="{{key .ID}}" tabindex="-1">
 {{if eq .Bucket "safety"}}<p class="chips"><span class="badge">Safety</span></p>{{else if eq .Bucket "roads"}}<p class="chips"><span class="badge">Roads</span></p>{{end}}
 <a class="ititle" href="{{.URL}}" rel="noopener noreferrer" target="_blank" {{if .LangOriginal}}{{if not .Translated}}lang="{{.LangOriginal}}"{{end}}{{end}}>{{.Title}}<span class="vh"> (opens in a new tab)</span></a>
 <span class="imeta">{{src .}}{{if .Translated}} &middot; translated from {{.Translated.From}}{{if .Translated.Low}} (check the original){{end}}{{end}}</span>
+{{template "where" .}}
 {{with .Summary}}<p class="isummary">{{.}}</p>{{end}}
 {{if .TitleOriginal}}<span class="orig" lang="{{.LangOriginal}}">{{.TitleOriginal}}</span>{{end}}
 </li>{{end}}
 
-{{define "group"}}{{if .Safety}}<h4 class="bk">Safety</h4><p class="fine bknote">As reported by sources. Not an official warning, and nothing here says a place is safe.</p><ul class="items">{{range .Safety}}{{template "item" .}}{{end}}</ul>{{end}}
-{{if .Roads}}<h4 class="bk">Roads and transport</h4><p class="fine bknote">As reported by sources. Not an official warning.</p><ul class="items">{{range .Roads}}{{template "item" .}}{{end}}</ul>{{end}}
-{{if .Events}}<h4 class="bk">Events</h4><ul class="items">{{range .Events}}{{template "item" .}}{{end}}</ul>{{end}}
-{{if .Background}}<h4 class="bk">Background</h4><ul class="items">{{range .Background}}{{template "item" .}}{{end}}</ul>{{end}}{{end}}
+{{define "group"}}{{if .Safety}}<h4 class="bk bk-safety"><i class="sw" aria-hidden="true"></i>Safety</h4><p class="fine bknote">As reported by sources. Not an official warning, and nothing here says a place is safe.</p><ul class="items">{{range .Safety}}{{template "item" .}}{{end}}</ul>{{end}}
+{{if .Roads}}<h4 class="bk bk-roads"><i class="sw" aria-hidden="true"></i>Roads and transport</h4><p class="fine bknote">As reported by sources. Not an official warning.</p><ul class="items">{{range .Roads}}{{template "item" .}}{{end}}</ul>{{end}}
+{{if .Events}}<h4 class="bk bk-events"><i class="sw" aria-hidden="true"></i>Events</h4><ul class="items">{{range .Events}}{{template "item" .}}{{end}}</ul>{{end}}
+{{if .Background}}<h4 class="bk bk-background"><i class="sw" aria-hidden="true"></i>Background</h4><ul class="items">{{range .Background}}{{template "item" .}}{{end}}</ul>{{end}}{{end}}
+
+{{define "elsewhere"}}{{with .Elsewhere}}<section class="elsewhere" aria-label="Not near this stop"><h3 class="sub">{{$.ElsewhereLabel}}</h3><p class="fine">Not near {{$.Name}}: news from the wider area, shown so the page is not empty. Check the place before you rely on it.</p><ul class="items">{{range .}}{{template "eitem" .}}{{end}}</ul></section>{{end}}{{end}}
 
 {{define "briefing"}}{{if .Pending}}<p class="note">{{.Pending}} more {{if eq .Pending 1}}story is{{else}}stories are{{end}} being translated into English and will appear in a few minutes.</p>{{end}}{{if .Widened}}<p class="note widened">{{.Widened}}</p>{{end}}<h3 class="sub">Right now</h3>
-{{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. Nothing reported does not mean nothing happened. Sources for each stop are found within the hour of making a route and read every few minutes.</p>{{else}}{{template "group" .Current}}{{end}}
-{{with .Elsewhere}}<section class="elsewhere" aria-label="Not near this stop"><h3 class="sub">{{$.ElsewhereLabel}}</h3><p class="fine">Not near {{$.Name}}: news from the wider area, shown so the page is not empty. Check the place before you rely on it.</p><ul class="items">{{range .}}{{template "eitem" .}}{{end}}</ul></section>{{end}}
-<h3 class="sub" id="days">Day by day</h3>
+{{if .Current.Empty}}<p class="empty">Nothing reported near {{.Name}} yet. We read the sources for this stop every few minutes. Nothing reported does not mean nothing happened, so check the stop's local news before you go.</p>{{else}}{{template "group" .Current}}{{end}}
+{{if eq .Own 0}}{{template "elsewhere" .}}{{end}}
+<h3 class="sub" id="days-{{.Index}}">Day by day</h3>
 {{$today := .Today}}{{range $i, $d := .Days}}{{if eq $d.Date $today}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="badge active">today</span> <span class="fine">is the "Right now" list above.</span></p>{{else if $d.Empty}}<p class="todayline"><b>{{dow $d.Date}}</b> <span class="fine">nothing new reported yet</span></p>{{else}}<details class="dayblock" {{if lt $i 4}}open{{end}}>
 <summary><b>{{dow $d.Date}}</b></summary>
 {{template "group" $d.Group}}
 </details>{{end}}{{end}}
-<p class="fine">Safety and roads: the most serious first. Events are on the days they take place; a story with no event date is on the day it was published, and safety and roads stay for three days. Sources are named so you can check them.</p>{{end}}
+<p class="fine">Safety and roads: the most serious first. Events are on the days they take place; a story with no event date is on the day it was published, and safety and roads stay for three days. Sources are named so you can check them.</p>
+{{if gt .Own 0}}{{template "elsewhere" .}}{{end}}{{end}}
