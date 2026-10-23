@@ -110,8 +110,9 @@ type BriefView struct {
 	Current        Group
 	Days           []DayGroup
 	Today          string
-	Index          int // the stop's place in the route
-	Own            int // stories listed for the stop itself (not from elsewhere)
+	Index          int    // the stop's place in the route
+	Own            int    // stories listed for the stop itself (not from elsewhere)
+	Things         []Item // events of the next 30 days and good news near the stop
 }
 
 // sevLabel says how serious a safety or roads story is, in words (never a verdict about a place).

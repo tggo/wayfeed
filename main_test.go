@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -25,6 +26,8 @@ type fakeFeedql struct {
 	apiErr     func(r *http.Request) (int, string)
 	bodies     []string
 	publicHits int
+	pubMu      sync.Mutex
+	pubQ       []string // the q of every read of the public demo feed
 	publicDown bool
 	queries    []string
 	deleted    int
@@ -113,14 +116,29 @@ func newFake(t *testing.T) *fakeFeedql {
 	mux.HandleFunc("DELETE /api/v1/channels/ch_1", api(func(w http.ResponseWriter, r *http.Request) { f.deleted++; w.WriteHeader(204) }))
 	// the public feed of the Sri Lanka example channel (an fqp_ feed): stories of the Colombo stop's topic, grouped by feedql
 	mux.HandleFunc("GET /p/fqp_demo/feed.json", func(w http.ResponseWriter, r *http.Request) {
+		f.pubMu.Lock()
 		f.publicHits++
+		f.pubQ = append(f.pubQ, r.URL.Query().Get("q"))
+		f.pubMu.Unlock()
 		if f.publicDown {
 			w.WriteHeader(503)
 			return
 		}
 		today := todayIn("Asia/Colombo")
-		if strings.Contains(r.URL.Query().Get("q"), "country:") { // the country fallback read
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "country:") && strings.Contains(q, "bucket:safety,roads,events,background") { // the country fallback read
 			_, _ = w.Write([]byte(`{"items":[{"id":"c1","url":"https://news.example/c1","title":"Lightning warning for 25 districts","summary":"A lightning warning was issued.","_feedql":{"topic":"Channel sources","bucket":"safety","severity":2,"source_name":"newswire.lk"}}]}`))
+			return
+		}
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "near:") && !strings.Contains(q, "near:6.93,") { // only the Colombo stop has stories
+			_, _ = w.Write([]byte(`{"items":[]}`))
+			return
+		}
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "bucket:events") { // the events read of a stop
+			_, _ = w.Write([]byte(`{"items":[{"id":"e1","url":"https://eventhappens.lk/e1","title":"Rata Baila","date_published":"2026-10-23T13:15:00Z","_feedql":{"topic":"Channel sources","bucket":"events","source_name":"eventhappens.lk","places":[{"name":"Colombo","country":"LK","level":"city","lat":6.93,"lon":79.86}],"when":{"start":"2026-10-24","end":"2026-10-24","all_day":true,"status":"scheduled"}}}]}`))
+			return
+		}
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "tone:positive") { // the good-news read of a stop
+			_, _ = w.Write([]byte(`{"items":[{"id":"g1","url":"https://news.example/g1","title":"Colombo opens a night market","date_published":"2026-10-22T13:15:00Z","_feedql":{"topic":"Channel sources","bucket":"background","source_name":"island.lk","places":[{"name":"Colombo","country":"LK","level":"city","lat":6.94,"lon":79.85}]}}]}`))
 			return
 		}
 		_, _ = w.Write([]byte(`{"items":[
@@ -743,12 +761,15 @@ func TestAStopWithNothingNearShowsItsCountrysNewsUnderItsOwnHeading(t *testing.T
 	mux := http.NewServeMux()
 	var srv *httptest.Server
 	var queries []string
+	var qmu sync.Mutex
 	mux.HandleFunc("GET /p/trips", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"trips":[{"slug":"georgia","name":"Georgia","stops":["Tbilisi"],"places":[{"name":"Tbilisi","country":"GE","lat":41.7,"lon":44.8,"radius_km":25}],"feed_url":"` + srv.URL + `/p/fqp_abc/feed.json"}]}`))
 	})
 	mux.HandleFunc("GET /p/fqp_abc/feed.json", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
+		qmu.Lock()
 		queries = append(queries, q)
+		qmu.Unlock()
 		if !strings.Contains(q, "country:GE") {
 			_, _ = w.Write([]byte(`{"items":[],"_feedql_groups":[]}`))
 			return
@@ -818,4 +839,42 @@ func fetchDefs(t *testing.T, base string) []DemoListItem {
 		t.Fatal(err)
 	}
 	return out.Trips
+}
+
+// Story 40.13: a demo stop is read with near: and the demo's own filter, and shows events and good news near it on the page and the map.
+func TestDemoStopReadsNearItsPointWithTheDemosFilterAndShowsEventsAndGoodNews(t *testing.T) {
+	f := newFake(t)
+	app, h := newTestApp(t, f)
+	app.demoDefs[0].Filter = "country:LK -type:question_chat,ad_seo,site_page"
+	b := do(h, "GET", "/demo/sri-lanka", "").Body.String()
+	for _, want := range []string{"Events &amp; things to do", "Rata Baila", "Colombo opens a night market", "Curfew lifted in Colombo", `"id":"e1`} {
+		if !strings.Contains(b, want) {
+			t.Errorf("page misses %q", want)
+		}
+	}
+	// Kandy and Ella have nothing near them in the fake: no section there, the page says so
+	if c := strings.Count(b, "Events &amp; things to do"); c != 1 {
+		t.Errorf("the section shows for %d stops, want 1", c)
+	}
+	var near, events, good int
+	seen := f.pubQ
+	for _, q := range seen {
+		if !strings.Contains(q, "country:LK -type:question_chat,ad_seo,site_page") {
+			t.Errorf("a read without the demo's filter: %q", q)
+		}
+		switch {
+		case strings.Contains(q, "bucket:events during:"):
+			events++
+			if !strings.Contains(q, "-tone:negative") {
+				t.Errorf("the events read allows a negative story: %q", q)
+			}
+		case strings.Contains(q, "tone:positive"):
+			good++
+		case strings.Contains(q, "near:") && !strings.Contains(q, "bucket:safety,roads"):
+			near++
+		}
+	}
+	if near != 3 || events != 3 || good != 3 {
+		t.Errorf("reads near/events/good = %d/%d/%d: %v", near, events, good, seen)
+	}
 }

@@ -46,3 +46,9 @@ No `/trips` route is called any more. A trip is a channel made from feedql's "tr
 ## The example routes are configuration (Story 40.11 prep, 2026-10-22)
 
 The three example routes come from `demos.json` in this repository (slug, title, stops with name, country, point and radius, and the `fqp_` public feed address of the channel that holds each), not from feedql's `GET /p/trips`, which goes away with the trip routes. The feed address is public by design. A stop's stories are read from that feed (`q=-topic:"Channel sources"` with `group=topic,day,bucket`), and the country fallback with `q=country:<cc>`. If a feed cannot be read, the last copy is shown for up to the cache's life; an unknown slug is a 404. Tests: `TestPilotRoutesArePublicWithNoAccount` and the demo tests set `App.demoDefs`.
+
+## Clean demo stops, events and good news (Story 40.13, 2026-10-23)
+
+- A demo stop is read with generic FQL on the channel's public feed, not through a topic named like the stop: `near:<lat>,<lon> <radius>km` plus the demo's own `filter` from `demos.json` (`country:LK -source:reddit -type:question_chat,ad_seo,site_page,job`), grouped by day and bucket, in English, with summaries. Off-country pages, chit-chat, ads and bare web pages drop out; the same filter is on the country read ("Elsewhere in ...").
+- Each stop has "Events & things to do": `bucket:events` of the next 30 days (never `tone:negative`) and `tone:positive` background stories of the last 14 days, at most 6, with their date and source. Every one with a point is also on the map. The old topic path stays as the fallback when no stop has a point or the feed has nothing near any stop.
+- Tests: `TestDemoStopReadsNearItsPointWithTheDemosFilterAndShowsEventsAndGoodNews`; the fake feed in `main_test.go` answers by `near:`, `bucket:events` and `tone:positive`. Coverage 89.9%.

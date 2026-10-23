@@ -30,7 +30,8 @@
    "Colombo",
    "Kandy",
    "Ella"
-  ]
+  ],
+  "filter": "country:LK -source:reddit -type:question_chat,ad_seo,site_page,job"
  },
  {
   "slug": "georgia",
@@ -63,7 +64,8 @@
    "Tbilisi",
    "Kazbegi",
    "Batumi"
-  ]
+  ],
+  "filter": "country:GE -source:reddit -type:question_chat,ad_seo,site_page,job"
  },
  {
   "slug": "us-west",
@@ -108,6 +110,7 @@
    "Las Vegas",
    "Flagstaff",
    "Moab"
-  ]
+  ],
+  "filter": "country:US -source:reddit -type:question_chat,ad_seo,site_page,job"
  }
 ]

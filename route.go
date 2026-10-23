@@ -107,6 +107,7 @@ func buildRoute(in []stopIn, cur int) RouteView {
 			}
 		}
 		add(s.Items, false)
+		add(s.Brief.Things, false)
 		add(s.Brief.Elsewhere, true)
 		rv.Stops[i] = rs
 	}
@@ -120,7 +121,7 @@ func demoRoute(t *DemoTrip, cur int) RouteView {
 	today := todayIn(demoZone[t.Slug])
 	in := make([]stopIn, len(t.Stops))
 	for i, s := range t.Stops {
-		in[i] = stopIn{Stop: s.Stop, Items: s.Items, Brief: BriefView{Elsewhere: s.Elsewhere, ElsewhereLabel: s.ElsewhereLabel, Pending: s.Pending, Widened: s.Widened, Name: s.Name, Current: s.Current, Days: newOnly(s.Current, s.Days), Today: today}}
+		in[i] = stopIn{Stop: s.Stop, Items: s.Items, Brief: BriefView{Elsewhere: s.Elsewhere, ElsewhereLabel: s.ElsewhereLabel, Things: s.Things, Pending: s.Pending, Widened: s.Widened, Name: s.Name, Current: s.Current, Days: newOnly(s.Current, s.Days), Today: today}}
 	}
 	return buildRoute(in, cur)
 }

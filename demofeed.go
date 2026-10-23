@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,34 +23,55 @@ const backgroundPerStop = 3
 // demoDays is how many days a stop lays out, starting today.
 const demoDays = 5
 
+// feedItem is one item of the public JSON Feed with feedql's extension.
+type feedItem struct {
+	ID            string `json:"id"`
+	URL           string `json:"url"`
+	Title         string `json:"title"`
+	Summary       string `json:"summary"`
+	DatePublished string `json:"date_published"`
+	FQ            struct {
+		Source        string  `json:"source"`
+		SourceName    string  `json:"source_name"`
+		Topic         string  `json:"topic"`
+		Bucket        string  `json:"bucket"`
+		Severity      int     `json:"severity"`
+		Official      bool    `json:"official"`
+		When          *When   `json:"when"`
+		Lang          string  `json:"lang"`
+		LangOriginal  string  `json:"lang_original"`
+		TitleOriginal string  `json:"title_original"`
+		Places        []Place `json:"places"`
+		Translated    *struct {
+			From string `json:"from"`
+			Low  bool   `json:"low"`
+		} `json:"translated"`
+		Translation *struct {
+			State string `json:"state"`
+		} `json:"translation"`
+	} `json:"_feedql"`
+}
+
+// item is the briefing story of a feed item.
+func (it feedItem) item() Item {
+	pub, _ := time.Parse(time.RFC3339, it.DatePublished)
+	x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
+		Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: shortSummary(it.Summary)}
+	if x.Source == "" {
+		x.Source = it.FQ.Source
+	}
+	x.Pin, x.Area = locate(it.FQ.Places)
+	if it.FQ.Translated != nil {
+		x.Translated = &struct {
+			From string `json:"from"`
+			Low  bool   `json:"low"`
+		}{it.FQ.Translated.From, it.FQ.Translated.Low}
+	}
+	return fixPageTitle(x)
+}
+
 type feedDoc struct {
-	Items []struct {
-		ID            string `json:"id"`
-		URL           string `json:"url"`
-		Title         string `json:"title"`
-		Summary       string `json:"summary"`
-		DatePublished string `json:"date_published"`
-		FQ            struct {
-			Source        string  `json:"source"`
-			SourceName    string  `json:"source_name"`
-			Topic         string  `json:"topic"`
-			Bucket        string  `json:"bucket"`
-			Severity      int     `json:"severity"`
-			Official      bool    `json:"official"`
-			When          *When   `json:"when"`
-			Lang          string  `json:"lang"`
-			LangOriginal  string  `json:"lang_original"`
-			TitleOriginal string  `json:"title_original"`
-			Places        []Place `json:"places"`
-			Translated    *struct {
-				From string `json:"from"`
-				Low  bool   `json:"low"`
-			} `json:"translated"`
-			Translation *struct {
-				State string `json:"state"`
-			} `json:"translation"`
-		} `json:"_feedql"`
-	} `json:"items"`
+	Items  []feedItem `json:"items"`
 	Groups []struct {
 		Day    string   `json:"day"`
 		Bucket string   `json:"bucket"`
@@ -68,6 +90,9 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 	if err != nil {
 		loc = time.UTC
 	}
+	if t := a.demoFromNear(ctx, d, tz, loc); t != nil {
+		return t, nil
+	}
 	var doc feedDoc
 	// the channel's raw stream ("Channel sources") repeats every item beside the stop topics and would fill the 50 rows a public read returns
 	q := "?lang=en&summary=1&group=topic,day,bucket&order=severity&collapse=event&tz=" + tz + "&q=" + url.QueryEscape(`-topic:"Channel sources"`)
@@ -84,20 +109,7 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		if it.FQ.Bucket == "" || it.Title == "" {
 			continue // a story with no bucket is not a briefing story
 		}
-		pub, _ := time.Parse(time.RFC3339, it.DatePublished)
-		x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
-			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: shortSummary(it.Summary)}
-		if x.Source == "" {
-			x.Source = it.FQ.Source
-		}
-		x.Pin, x.Area = locate(it.FQ.Places)
-		if it.FQ.Translated != nil {
-			x.Translated = &struct {
-				From string `json:"from"`
-				Low  bool   `json:"low"`
-			}{it.FQ.Translated.From, it.FQ.Translated.Low}
-		}
-		items[it.ID] = fixPageTitle(x)
+		items[it.ID] = it.item()
 	}
 	today := time.Now().In(loc).Format("2006-01-02")
 	days := make([]string, demoDays)
@@ -119,6 +131,164 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 		}
 	}
 	return nil, errNoStops
+}
+
+// thingsMax is how many stories "Events & things to do" shows for a stop.
+const thingsMax = 6
+
+// thingsDays is how far ahead the events of a stop are looked for.
+const thingsDays = 30
+
+// demoFromNear reads each stop of a demo with generic FQL on the channel's public feed: the stories whose subject place is within the
+// stop's radius (near:), narrowed by the demo's own filter (country, junk types), grouped by day and bucket. The channel needs no topic
+// per stop. A stop also gets "Events & things to do": the events of the next 30 days and the positive stories near it. It returns nil
+// when no stop has a point (the topic path then reads the channel) or the feed has nothing for any stop.
+func (a *App) demoFromNear(ctx context.Context, d DemoListItem, tz string, loc *time.Location) *DemoTrip {
+	today := time.Now().In(loc).Format("2006-01-02")
+	days := make([]string, demoDays)
+	for i := range days {
+		days[i] = time.Now().In(loc).AddDate(0, 0, i).Format("2006-01-02")
+	}
+	horizon := time.Now().In(loc).AddDate(0, 0, thingsDays).Format("2006-01-02")
+	t := &DemoTrip{Slug: d.Slug, Name: d.Name, Alerts: []DemoAlert{}, Disclaimer: demoDisclaimer, GeneratedAt: time.Now().UTC()}
+	t.Stops = make([]DemoStop, len(d.Stops))
+	var wg sync.WaitGroup
+	pointed := false
+	for i, name := range d.Stops {
+		stop := demoStopOf(d, name)
+		t.Stops[i] = DemoStop{Stop: stop, Items: []Item{}, Days: []DayGroup{}}
+		if stop.Lat == 0 && stop.Lon == 0 {
+			continue
+		}
+		pointed = true
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			near := "near:" + strconv.FormatFloat(stop.Lat, 'f', -1, 64) + "," + strconv.FormatFloat(stop.Lon, 'f', -1, 64) + " " + strconv.Itoa(stopRadius(stop)) + "km"
+			t.Stops[i] = a.readNearStop(ctx, d, stop, near, tz, days, today, horizon)
+		}()
+	}
+	wg.Wait()
+	if !pointed {
+		return nil
+	}
+	a.addElsewhere(ctx, d, t)
+	for _, st := range t.Stops {
+		if len(st.Items) > 0 || st.Pending > 0 || len(st.Things) > 0 || len(st.Elsewhere) > 0 {
+			return t
+		}
+	}
+	return nil
+}
+
+func stopRadius(s Stop) int {
+	if s.RadiusKm > 0 {
+		return s.RadiusKm
+	}
+	return 25
+}
+
+// withFilter adds the demo's own filter (its country, the types it leaves out) to a query.
+func withFilter(d DemoListItem, q string) string {
+	if d.Filter == "" {
+		return q
+	}
+	return q + " " + d.Filter
+}
+
+// readNearStop is one stop: its day-by-day briefing and its "Events & things to do".
+func (a *App) readNearStop(ctx context.Context, d DemoListItem, stop Stop, near, tz string, days []string, today, horizon string) DemoStop {
+	st := DemoStop{Stop: stop, Items: []Item{}, Days: []DayGroup{}}
+	base := strings.SplitN(d.FeedURL, "?", 2)[0]
+	common := "?lang=en&summary=1&collapse=event&tz=" + tz
+	var doc, events, good feedDoc
+	var wg sync.WaitGroup
+	for _, r := range []struct {
+		into *feedDoc
+		path string
+	}{
+		{&doc, common + "&group=day,bucket&order=severity&q=" + url.QueryEscape(withFilter(d, near))},
+		// the events of the next 30 days; a good-news story (tone:positive) is never a safety or roads one, and a negative one never shows here
+		{&events, common + "&order=time&q=" + url.QueryEscape(withFilter(d, near+" bucket:events during:"+today+".."+horizon+" -tone:negative"))},
+		{&good, common + "&order=time&q=" + url.QueryEscape(withFilter(d, near+" tone:positive bucket:background since:14d"))},
+	} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = a.api.PublicGetURL(ctx, base+r.path, r.into)
+		}()
+	}
+	wg.Wait()
+	items, pending := readItems(&doc)
+	st.Pending = pending
+	byDay := map[string]*Group{}
+	for _, day := range days {
+		byDay[day] = &Group{}
+	}
+	seenDay := map[string]bool{}
+	seen := map[string]bool{}
+	for _, g := range doc.Groups {
+		target := byDay[g.Day]
+		if target == nil {
+			continue
+		}
+		for _, id := range g.Items {
+			x, ok := items[id]
+			if !ok || seenDay[g.Day+id] {
+				continue
+			}
+			seenDay[g.Day+id] = true
+			put(target, x)
+			if !seen[id] {
+				seen[id] = true
+				st.Items = append(st.Items, x)
+			}
+		}
+	}
+	for _, day := range days {
+		g := byDay[day]
+		g.Background = capItems(g.Background, backgroundPerStop)
+		st.Days = append(st.Days, DayGroup{Date: day, Group: *g})
+	}
+	st.Current = *byDay[today]
+	for _, fd := range []*feedDoc{&events, &good} {
+		more, _ := readItems(fd)
+		for _, it := range fd.Items {
+			x, ok := more[it.ID]
+			if !ok || len(st.Things) >= thingsMax || thingSeen(st.Things, x.ID) {
+				continue
+			}
+			st.Things = append(st.Things, x)
+		}
+	}
+	return st
+}
+
+func thingSeen(in []Item, id string) bool {
+	for _, x := range in {
+		if x.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// readItems turns a feed document into briefing stories: a story with no bucket or no headline in English is left out, and the ones whose
+// headline is still being translated are counted (the page says so).
+func readItems(doc *feedDoc) (map[string]Item, int) {
+	items := map[string]Item{}
+	pending := 0
+	for _, it := range doc.Items {
+		if it.FQ.Translation != nil && it.FQ.Translation.State != "ready" {
+			pending++
+			continue
+		}
+		if it.FQ.Bucket == "" || it.Title == "" {
+			continue
+		}
+		items[it.ID] = it.item()
+	}
+	return items, pending
 }
 
 // layOutStops puts the feed's groups into stops. With all, every topic counts for the one stop given (a channel without a topic per stop).
@@ -224,7 +394,7 @@ func (a *App) addElsewhere(ctx context.Context, d DemoListItem, t *DemoTrip) {
 		}
 		items, ok := reads[q]
 		if !ok {
-			items = a.readElsewhere(ctx, d.FeedURL, q)
+			items = a.readElsewhere(ctx, d, q)
 			reads[q] = items
 		}
 		shown := map[string]bool{}
@@ -254,10 +424,10 @@ func (a *App) addElsewhere(ctx context.Context, d DemoListItem, t *DemoTrip) {
 }
 
 // readElsewhere reads the demo's feed with one more filter and returns the briefing stories (a bucket, a headline in English).
-func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
+func (a *App) readElsewhere(ctx context.Context, d DemoListItem, q string) []Item {
 	var doc feedDoc
-	filter := q + " bucket:safety,roads,events,background -source:reddit"
-	u := strings.SplitN(feedURL, "?", 2)[0] + "?lang=en&summary=1&order=severity&collapse=event&q=" + url.QueryEscape(filter)
+	filter := withFilter(d, q+" bucket:safety,roads,events,background -source:reddit")
+	u := strings.SplitN(d.FeedURL, "?", 2)[0] + "?lang=en&summary=1&order=severity&collapse=event&q=" + url.QueryEscape(filter)
 	if err := a.api.PublicGetURL(ctx, u, &doc); err != nil {
 		return nil
 	}
@@ -266,20 +436,7 @@ func (a *App) readElsewhere(ctx context.Context, feedURL, q string) []Item {
 		if it.FQ.Bucket == "" || it.Title == "" || (it.FQ.Translation != nil && it.FQ.Translation.State != "ready") {
 			continue
 		}
-		pub, _ := time.Parse(time.RFC3339, it.DatePublished)
-		x := Item{ID: it.ID, URL: it.URL, Title: it.Title, TitleOriginal: it.FQ.TitleOriginal, LangOriginal: it.FQ.LangOriginal, Source: it.FQ.SourceName, Published: pub,
-			Bucket: it.FQ.Bucket, Severity: it.FQ.Severity, Official: it.FQ.Official, When: it.FQ.When, Summary: shortSummary(it.Summary)}
-		if x.Source == "" {
-			x.Source = it.FQ.Source
-		}
-		x.Pin, x.Area = locate(it.FQ.Places)
-		if it.FQ.Translated != nil {
-			x.Translated = &struct {
-				From string `json:"from"`
-				Low  bool   `json:"low"`
-			}{it.FQ.Translated.From, it.FQ.Translated.Low}
-		}
-		out = append(out, fixPageTitle(x))
+		out = append(out, it.item())
 	}
 	return out
 }

@@ -363,6 +363,9 @@ type DemoListItem struct {
 	FeedURL string   `json:"feed_url"`
 	// Places are the stops with their country and point, for the "elsewhere" read of a stop.
 	Places []DemoPlace `json:"places"`
+	// Filter is the demo's own generic FQL filter added to every read (its country, the item types it leaves out), e.g.
+	// "country:LK -type:question_chat,ad_seo,site_page".
+	Filter string `json:"filter"`
 }
 
 // DemoPlace is a stop as the demo list gives it.
@@ -388,6 +391,8 @@ type DemoStop struct {
 	// Elsewhere are stories from the stop's country (or a wider radius) that are not near the stop, at most 5, under their own heading.
 	Elsewhere      []Item `json:"elsewhere"`
 	ElsewhereLabel string `json:"elsewhere_label"`
+	// Things are the events of the next 30 days and the good-news stories near the stop ("Events & things to do").
+	Things []Item `json:"things"`
 }
 
 // DemoAlert is an alert of a demo trip.
