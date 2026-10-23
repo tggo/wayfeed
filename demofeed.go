@@ -136,6 +136,9 @@ func (a *App) demoFromFeed(ctx context.Context, d DemoListItem) (*DemoTrip, erro
 // thingsMax is how many stories "Events & things to do" shows for a stop.
 const thingsMax = 6
 
+// latestMax is how many of a stop's latest stories stand under "Right now" when none is from the days the page lays out.
+const latestMax = 4
+
 // thingsDays is how far ahead the events of a stop are looked for.
 const thingsDays = 30
 
@@ -210,7 +213,7 @@ func (a *App) readNearStop(ctx context.Context, d DemoListItem, stop Stop, near,
 		{&doc, common + "&group=day,bucket&order=severity&q=" + url.QueryEscape(withFilter(d, near))},
 		// the events of the next 30 days; a good-news story (tone:positive) is never a safety or roads one, and a negative one never shows here
 		{&events, common + "&order=time&q=" + url.QueryEscape(withFilter(d, near+" bucket:events during:"+today+".."+horizon+" -tone:negative"))},
-		{&good, common + "&order=time&q=" + url.QueryEscape(withFilter(d, near+" tone:positive bucket:background since:14d"))},
+		{&good, common + "&order=time&q=" + url.QueryEscape(withFilter(d, near+" tone:positive bucket:background since:14d -protest -strike -rally -curfew -clash -riot"))},
 	} {
 		wg.Add(1)
 		go func() {
@@ -251,11 +254,28 @@ func (a *App) readNearStop(ctx context.Context, d DemoListItem, stop Stop, near,
 		st.Days = append(st.Days, DayGroup{Date: day, Group: *g})
 	}
 	st.Current = *byDay[today]
+	if len(st.Items) == 0 && len(items) > 0 {
+		// the stop has stories, only none from the days the page lays out (a mountain village reported four days ago): the latest ones
+		// stand under "Right now" with a note, instead of the page saying nothing was reported near it
+		var latest []Item
+		for _, it := range doc.Items {
+			if x, ok := items[it.ID]; ok && len(latest) < latestMax {
+				latest = append(latest, x)
+			}
+		}
+		for _, x := range latest {
+			put(&st.Current, x)
+			st.Items = append(st.Items, x)
+			seen[x.ID] = true
+		}
+		st.Current.Background = capItems(st.Current.Background, latestMax)
+		st.Widened = "Nothing new in the last few days near " + stop.Name + ". These are the latest reports from nearby."
+	}
 	for _, fd := range []*feedDoc{&events, &good} {
 		more, _ := readItems(fd)
 		for _, it := range fd.Items {
 			x, ok := more[it.ID]
-			if !ok || len(st.Things) >= thingsMax || thingSeen(st.Things, x.ID) {
+			if !ok || len(st.Things) >= thingsMax || thingSeen(st.Things, x.ID) || (x.Bucket != "events" && x.protest()) {
 				continue
 			}
 			st.Things = append(st.Things, x)
@@ -483,4 +503,18 @@ func demoStopOf(d DemoListItem, name string) Stop {
 		}
 	}
 	return Stop{Name: name}
+}
+
+var protestWords = []string{"protest", "strike", "rally", "demonstrat", "curfew", "riot", "clash", "satyagraha", "agitation", "unrest"}
+
+// protest says a story is about a protest, a strike or unrest in its headline or summary: the model sometimes calls such a story
+// positive or background, and "Events & things to do" must never present it as good news.
+func (x Item) protest() bool {
+	t := strings.ToLower(x.Title + " " + x.Summary + " " + x.TitleOriginal)
+	for _, w := range protestWords {
+		if strings.Contains(t, w) {
+			return true
+		}
+	}
+	return false
 }

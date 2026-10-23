@@ -129,7 +129,11 @@ func newFake(t *testing.T) *fakeFeedql {
 			_, _ = w.Write([]byte(`{"items":[{"id":"c1","url":"https://news.example/c1","title":"Lightning warning for 25 districts","summary":"A lightning warning was issued.","_feedql":{"topic":"Channel sources","bucket":"safety","severity":2,"source_name":"newswire.lk"}}]}`))
 			return
 		}
-		if q := r.URL.Query().Get("q"); strings.Contains(q, "near:") && !strings.Contains(q, "near:6.93,") { // only the Colombo stop has stories
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "near:7.29,") && !strings.Contains(q, "tone:positive") && !strings.Contains(q, "bucket:events") { // Kandy: one story, older than the days the page lays out
+			_, _ = w.Write([]byte(`{"items":[{"id":"k1","url":"https://news.example/k1","title":"Bridge works start on the Kandy road","date_published":"2026-10-10T08:00:00Z","_feedql":{"topic":"Channel sources","bucket":"background","source_name":"road.gov.ge","places":[{"name":"Kandy","country":"LK","level":"city","lat":7.29,"lon":80.63}]}}],"_feedql_groups":[{"day":"2026-10-10","bucket":"background","items":["k1"]}]}`))
+			return
+		}
+		if q := r.URL.Query().Get("q"); strings.Contains(q, "near:") && !strings.Contains(q, "near:6.93,") { // only the Colombo stop has more
 			_, _ = w.Write([]byte(`{"items":[]}`))
 			return
 		}
@@ -138,7 +142,7 @@ func newFake(t *testing.T) *fakeFeedql {
 			return
 		}
 		if q := r.URL.Query().Get("q"); strings.Contains(q, "tone:positive") { // the good-news read of a stop
-			_, _ = w.Write([]byte(`{"items":[{"id":"g1","url":"https://news.example/g1","title":"Colombo opens a night market","date_published":"2026-10-22T13:15:00Z","_feedql":{"topic":"Channel sources","bucket":"background","source_name":"island.lk","places":[{"name":"Colombo","country":"LK","level":"city","lat":6.94,"lon":79.85}]}}]}`))
+			_, _ = w.Write([]byte(`{"items":[{"id":"g1","url":"https://news.example/g1","title":"Colombo opens a night market","date_published":"2026-10-22T13:15:00Z","_feedql":{"topic":"Channel sources","bucket":"background","source_name":"island.lk","places":[{"name":"Colombo","country":"LK","level":"city","lat":6.94,"lon":79.85}]}},{"id":"g2","url":"https://news.example/g2","title":"Monks' continuing protest!!","date_published":"2026-10-22T13:00:00Z","_feedql":{"topic":"Channel sources","bucket":"background","source_name":"island.lk","places":[{"name":"Colombo","country":"LK","level":"city","lat":6.94,"lon":79.85}]}}]}`))
 			return
 		}
 		_, _ = w.Write([]byte(`{"items":[
@@ -624,7 +628,7 @@ func TestPilotRoutesArePublicWithNoAccount(t *testing.T) {
 		}
 	}
 	// a second stop has nothing yet and says so; a bad stop index falls back to the first
-	if b := do(h, "GET", "/demo/sri-lanka?stop=1", "").Body.String(); !strings.Contains(b, "Nothing reported near Kandy yet") {
+	if b := do(h, "GET", "/demo/sri-lanka?stop=2", "").Body.String(); !strings.Contains(b, "Nothing reported near Ella yet") {
 		t.Error("empty stop")
 	}
 	if !strings.Contains(do(h, "GET", "/demo/sri-lanka?stop=9", "").Body.String(), "Curfew lifted") {
@@ -876,5 +880,31 @@ func TestDemoStopReadsNearItsPointWithTheDemosFilterAndShowsEventsAndGoodNews(t 
 	}
 	if near != 3 || events != 3 || good != 3 {
 		t.Errorf("reads near/events/good = %d/%d/%d: %v", near, events, good, seen)
+	}
+}
+
+// Story 40.13 follow-up: a protest is never good news, and a stop whose only stories are older than the page's days shows the latest.
+func TestAProtestIsNeverGoodNewsAndAStopWithOnlyOlderStoriesShowsTheLatest(t *testing.T) {
+	f := newFake(t)
+	_, h := newTestApp(t, f)
+	b := do(h, "GET", "/demo/sri-lanka", "").Body.String()
+	if !strings.Contains(b, "Colombo opens a night market") || strings.Contains(b, "Monks&#39; continuing protest") || strings.Contains(b, "Monks' continuing protest") {
+		t.Error("good news keeps the night market and drops the protest")
+	}
+	if !strings.Contains(b, "Bridge works start on the Kandy road") || !strings.Contains(b, "These are the latest reports from nearby.") || strings.Contains(b, "Nothing reported near Kandy yet") {
+		t.Error("Kandy shows its latest story under a note, not an empty stop")
+	}
+	for _, q := range f.pubQ {
+		if strings.Contains(q, "tone:positive") && !strings.Contains(q, "-protest") {
+			t.Errorf("the good-news read allows protests: %q", q)
+		}
+	}
+	for _, c := range []struct {
+		title string
+		want  bool
+	}{{"Monks' continuing protest!!", true}, {"Dock workers strike", true}, {"Curfew lifted", true}, {"Night market opens", false}, {"Sinhabahu", false}} {
+		if got := (Item{Title: c.title}).protest(); got != c.want {
+			t.Errorf("%q protest = %v", c.title, got)
+		}
 	}
 }
